@@ -1,0 +1,64 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: antifraud-mvp-backend
+    env_file:
+      - ./backend/.env
+    volumes:
+      - backend_media:/app/media
+    depends_on:
+      - postgres
+      - neo4j
+    ports:
+      - "8000:8000"
+    networks:
+      - antifraud_net
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: antifraud-mvp-frontend
+    environment:
+      - NUXT_PUBLIC_API_BASE=http://localhost:8000/api
+      - NUXT_SERVER_API_BASE=http://backend:8000/api
+    depends_on:
+      - backend
+    ports:
+      - "3100:3100"
+    networks:
+      - antifraud_net
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: antifraud-mvp-postgres
+    environment:
+      - POSTGRES_DB=antifraud
+      - POSTGRES_USER=antifraud
+      - POSTGRES_PASSWORD=antifraud
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - antifraud_net
+
+  neo4j:
+    image: neo4j:5
+    container_name: antifraud-mvp-neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/neo4j-password
+    volumes:
+      - neo4j_data:/data
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    networks:
+      - antifraud_net
+
+volumes:
+  backend_media:
+  postgres_data:
+  neo4j_data:
+
+networks:
+  antifraud_net:
+    driver: bridge

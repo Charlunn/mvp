@@ -1,0 +1,92 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: antifraud-prod-postgres
+    environment:
+      POSTGRES_DB: antifraud
+      POSTGRES_USER: antifraud
+      POSTGRES_PASSWORD: antifraud
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U antifraud"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - antifraud_prod
+    ports:
+      - "5432:5432"
+
+  neo4j:
+    image: neo4j:5
+    container_name: antifraud-prod-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/neo4j-password
+      NEO4J_dbms_memory_pagecache_size: 512M
+      NEO4J_dbms_memory_heap_max__size: 512M
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - antifraud_prod
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+
+  backend:
+    build:
+      context: ./backend
+    container_name: antifraud-prod-backend
+    env_file:
+      - ./backend/.env
+    volumes:
+      - backend_media:/app/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_started
+    networks:
+      - antifraud_prod
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: antifraud-prod-frontend
+    environment:
+      NUXT_PUBLIC_API_BASE: /api
+      NUXT_SERVER_API_BASE: http://backend:8000/api
+      HOST: 0.0.0.0
+      PORT: 3000
+      NITRO_PORT: 3000
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - antifraud_prod
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: antifraud-prod-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_started
+    networks:
+      - antifraud_prod
+
+volumes:
+  backend_media:
+  postgres_data:
+  neo4j_data:
+
+networks:
+  antifraud_prod:
+    driver: bridge
