@@ -430,7 +430,6 @@ const mapNode = (node: any) => {
 
   return {
     name: node.id,
-    label: labelText,
     category: node.category || props.category || '未分类',
     riskLevel,
     value: node.value || 1,

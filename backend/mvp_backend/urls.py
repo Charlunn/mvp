@@ -28,6 +28,8 @@ urlpatterns = [
     path("api/quiz/", include("quiz.urls", namespace="quiz")),
     path("api/chat/", include("chatapi.urls", namespace="chat_api")),
     path("api/graph/", include("graph_api.urls", namespace="graph_api")),
+    path("api/community/", include("community.urls")),
+    path("api/notifications/", include("notifications.urls")),
 ]
 
 if settings.DEBUG:

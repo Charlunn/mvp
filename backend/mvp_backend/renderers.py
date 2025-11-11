@@ -1,5 +1,6 @@
 from rest_framework.renderers import JSONRenderer
 import json
+import datetime
 
 class UnicodeJSONRenderer(JSONRenderer):
     """
@@ -16,11 +17,17 @@ class UnicodeJSONRenderer(JSONRenderer):
         if data is None:
             return b''
         
+        def datetime_serializer(obj):
+            if isinstance(obj, (datetime.datetime, datetime.date)):
+                return obj.isoformat()
+            raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+
         ret = json.dumps(
             data, 
             ensure_ascii=False,
             indent=2 if getattr(self, 'json_underscoreize_names', False) else None,
-            separators=(',', ': ')
+            separators=(',', ': '),
+            default=datetime_serializer
         )
         
         return ret.encode('utf-8')

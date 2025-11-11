@@ -4,7 +4,7 @@ services:
       context: ./backend
     container_name: antifraud-mvp-backend
     env_file:
-      - ./backend/.env
+      - ./.env
     volumes:
       - backend_media:/app/media
     depends_on:
@@ -33,9 +33,9 @@ services:
     image: postgres:15-alpine
     container_name: antifraud-mvp-postgres
     environment:
-      - POSTGRES_DB=antifraud
-      - POSTGRES_USER=antifraud
-      - POSTGRES_PASSWORD=antifraud
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -45,7 +45,7 @@ services:
     image: neo4j:5
     container_name: antifraud-mvp-neo4j
     environment:
-      - NEO4J_AUTH=neo4j/neo4j-password
+      - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
     volumes:
       - neo4j_data:/data
     ports:

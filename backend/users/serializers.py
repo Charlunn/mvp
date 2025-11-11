@@ -56,6 +56,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     avatar = serializers.ImageField(required=False)
     cached_avatar_url = serializers.SerializerMethodField()
+    community_stats = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
@@ -71,6 +72,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'avatar',
             'avatar_url',
             'cached_avatar_url',
+            'profile_visibility',
+            'show_email',
+            'show_phone',
+            'allow_friend_requests',
+            'show_online_status',
+            'community_stats',
         )
         read_only_fields = (
             'username',
@@ -79,6 +86,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'is_staff',
             'is_superuser',
             'cached_avatar_url',
+            'community_stats',
         )
     
     def get_cached_avatar_url(self, obj):
@@ -102,8 +110,30 @@ class UserProfileSerializer(serializers.ModelSerializer):
             except Exception:
                 # 如果缓存失败，返回原始URL
                 return obj.avatar_url
-        
+
         return None
+
+    def get_community_stats(self, obj):
+        try:
+            from community.models import Comment, CommentLike, Post, PostLike
+
+            posts_count = Post.objects.filter(author=obj, is_deleted=False).count()
+            comments_count = Comment.objects.filter(author=obj, is_deleted=False).count()
+            post_likes = PostLike.objects.filter(post__author=obj).count()
+            comment_likes = CommentLike.objects.filter(comment__author=obj).count()
+            return {
+                'posts_published': posts_count,
+                'comments_written': comments_count,
+                'post_likes_received': post_likes,
+                'comment_likes_received': comment_likes,
+            }
+        except Exception:
+            return {
+                'posts_published': 0,
+                'comments_written': 0,
+                'post_likes_received': 0,
+                'comment_likes_received': 0,
+            }
 
     def validate_email(self, value):
         # 校验邮箱唯一性
@@ -157,6 +187,73 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.set_password(self.validated_data['new_password'])
         user.save()
         return user
+
+
+class PublicUserProfileSerializer(serializers.ModelSerializer):
+    cached_avatar_url = serializers.SerializerMethodField()
+    community_stats = serializers.SerializerMethodField()
+    email = serializers.SerializerMethodField()
+    phone_number = serializers.SerializerMethodField()
+    is_self = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomUser
+        fields = (
+            'username',
+            'nickname',
+            'fraud_level',
+            'user_type',
+            'avatar_url',
+            'cached_avatar_url',
+            'profile_visibility',
+            'show_email',
+            'show_phone',
+            'allow_friend_requests',
+            'show_online_status',
+            'community_stats',
+            'email',
+            'phone_number',
+            'is_self',
+        )
+        read_only_fields = fields
+
+    def _viewer(self):
+        request = self.context.get('request')
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            return request.user
+        return None
+
+    def _can_view_sensitive(self, obj):
+        viewer = self._viewer()
+        if not viewer:
+            return False
+        if viewer == obj:
+            return True
+        if viewer.is_superuser or viewer.is_staff or getattr(viewer, 'user_type', '') == 'admin':
+            return True
+        return False
+
+    def get_cached_avatar_url(self, obj):
+        helper = UserProfileSerializer(context=self.context)
+        return helper.get_cached_avatar_url(obj)
+
+    def get_community_stats(self, obj):
+        helper = UserProfileSerializer(context=self.context)
+        return helper.get_community_stats(obj)
+
+    def get_email(self, obj):
+        if obj.show_email or self._can_view_sensitive(obj):
+            return obj.email
+        return None
+
+    def get_phone_number(self, obj):
+        if obj.show_phone or self._can_view_sensitive(obj):
+            return obj.phone_number
+        return None
+
+    def get_is_self(self, obj):
+        viewer = self._viewer()
+        return bool(viewer and viewer == obj)
 
 
 class UserSettingsSerializer(serializers.ModelSerializer):

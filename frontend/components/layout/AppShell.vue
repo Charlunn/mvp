@@ -4,8 +4,8 @@
       class="hidden md:flex md:sticky md:top-0 md:h-screen md:self-start md:overflow-y-auto flex-col border-r border-border px-6 py-8 gap-8"
     >
       <div>
-        <p class="text-sm uppercase tracking-[0.3em] text-muted-foreground">AntiFraud</p>
-        <p class="text-lg font-semibold">运营指挥台</p>
+        <p class="text-sm uppercase tracking-[0.3em] text-muted-foreground">VirifySpring</p>
+        <p class="text-lg font-semibold">澄源</p>
       </div>
       <nav class="space-y-1">
         <NuxtLink
@@ -13,9 +13,17 @@
           :key="item.to"
           :to="item.to"
           class="flex items-center justify-between rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition hover:border-border hover:bg-secondary"
-          :class="route.path === item.to ? 'bg-secondary border-border text-foreground' : 'text-muted-foreground'"
+          :class="isActive(item.to) ? 'bg-secondary border-border text-foreground' : 'text-muted-foreground'"
         >
-          <span>{{ item.label }}</span>
+          <div class="flex items-center gap-2">
+            <span>{{ item.label }}</span>
+            <span
+              v-if="item.label === '消息中心' && unreadCount > 0"
+              class="bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center"
+            >
+              {{ unreadCount }}
+            </span>
+          </div>
           <Icon :name="item.icon" class="h-4 w-4" />
         </NuxtLink>
       </nav>
@@ -49,7 +57,6 @@
       </div>
 
       <div class="mt-auto text-xs text-muted-foreground">
-        <p>沉浸式黑白主题界面</p>
         <p class="mt-1">{{ today }}</p>
       </div>
     </aside>
@@ -62,7 +69,18 @@
           菜单
         </button>
         <NuxtLink to="/" class="font-semibold">澄源反诈平台</NuxtLink>
-        <ThemeToggle />
+        <div class="flex items-center gap-2">
+          <NuxtLink to="/notifications" class="relative">
+            <Icon name="lucide:bell" class="h-5 w-5" />
+            <span
+              v-if="unreadCount > 0"
+              class="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center"
+            >
+              {{ unreadCount }}
+            </span>
+          </NuxtLink>
+          <ThemeToggle />
+        </div>
       </header>
       <Transition name="fade">
         <div v-if="drawerOpen" class="md:hidden border-b border-border bg-background px-4 py-4 space-y-4">
@@ -71,11 +89,17 @@
               v-for="item in navItems"
               :key="item.to"
               :to="item.to"
-              class="block rounded-lg px-3 py-2 text-sm font-medium"
-              :class="route.path === item.to ? 'bg-secondary text-foreground' : 'text-muted-foreground'"
+              class="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium"
+              :class="isActive(item.to) ? 'bg-secondary text-foreground' : 'text-muted-foreground'"
               @click="drawerOpen = false"
             >
-              {{ item.label }}
+              <span>{{ item.label }}</span>
+              <span
+                v-if="item.label === '消息中心' && unreadCount > 0"
+                class="bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center"
+              >
+                {{ unreadCount }}
+              </span>
             </NuxtLink>
           </nav>
           <div class="rounded-lg border border-border/80 p-3 text-sm">
@@ -108,19 +132,30 @@
 
 <script setup lang="ts">
 import ThemeToggle from '~/components/layout/ThemeToggle.vue'
+import { useNotifications } from '~/composables/useNotifications'
 
 const route = useRoute()
 const drawerOpen = ref(false)
 const auth = useAuthStore()
 const logoutLoading = ref(false)
+const { unreadCount } = useNotifications()
 
 const navItems = [
   { label: '概览', to: '/', icon: 'lucide:layout-dashboard' },
+  { label: '社区广场', to: '/community', icon: 'lucide:users-round' },
+  { label: '消息中心', to: '/notifications', icon: 'lucide:bell' },
   { label: '知识测验', to: '/quiz', icon: 'lucide:badge-check' },
   { label: 'AI 场景模拟', to: '/simulation', icon: 'lucide:bot' },
   { label: '知识图谱', to: '/graph', icon: 'lucide:share-2' },
   { label: '个人主页', to: '/profile', icon: 'lucide:user-round' },
 ]
+
+const isActive = (path: string) => {
+  if (path === '/') {
+    return route.path === '/'
+  }
+  return route.path.startsWith(path)
+}
 
 const userDisplayName = computed(() => auth.user?.nickname || auth.user?.username || '访客')
 const today = new Date().toLocaleDateString('zh-CN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
