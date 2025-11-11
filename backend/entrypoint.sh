@@ -7,9 +7,9 @@ python manage.py migrate --noinput
 echo "[backend] Collecting static files..."
 python manage.py collectstatic --noinput
 
-echo "[backend] Seeding Neo4j data (safe to rerun)..."
+echo "[backend] Seeding Neo4j data (safe to rerun with legacy dataset)..."
 retries=10
-until python -m scripts.neo4j_seed; do
+until python init_neo4j.py --dataset=legacy; do
   retries=$((retries-1))
   if [ "$retries" -le 0 ]; then
     echo "[backend] Neo4j seed failed after multiple attempts. Continuing without seed."
