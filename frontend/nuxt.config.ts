@@ -5,6 +5,12 @@ const defaultServerApiBase = isProd ? 'http://backend:8000/api' : 'http://localh
 const defaultPublicApiBase = isProd ? '/api' : 'http://localhost:8000/api'
 
 export default defineNuxtConfig({
+  app: {
+    head: {
+      title: '澄源反诈骗',
+      link: [{ rel: 'icon', href: '/favicon.ico' }]
+    }
+  },
   compatibilityDate: '2024-12-01',
   devtools: { enabled: false },
   css: ['~/assets/css/tailwind.css'],
