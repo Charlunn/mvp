@@ -1,118 +1,121 @@
-﻿# AntiFraud MVP
+# AntiFraud MVP
 
-A stripped-down delivery of the anti-fraud knowledge platform focused on the four features requested for the MVP release:
+这是一个聚焦反欺诈知识平台核心流程的精简交付版本（MVP），整合了后端 Django、前端 Nuxt 以及 Neo4j 图数据库能力，便于团队快速演示与验证以下功能：
 
-- **鐭ヨ瘑娴嬮獙**锛氱敤鎴风粌涔犮€佺鐞嗗憳鎵╁厖棰樺簱
-- **AI 鍙嶈瘓楠楀満鏅ā鎷?*锛氫細璇濆紡璁粌 + 鑷姩鍖栨姤鍛?- **鐭ヨ瘑鍥捐氨鍙鍖?*锛氶粦鐧?shadcn 椋庢牸鐨勫彲瑙嗗寲鐣岄潰
-- **鍩虹鐢ㄦ埛鍔熻兘**锛氭敞鍐?/ 鐧诲綍 / 涓汉涓婚〉 / 缁熻
+- **知识演练**：支持普通用户刷题、管理员维护题库。
+- **AI 情景模拟与报告**：提供对话式演练，并自动生成训练评估报告。
+- **知识图谱可视化**：采用 shadcn 风格组件实现黑白主题的交互界面。
+- **基础用户体系**：注册、登录、个人中心与统计概览。
 
-## Project layout
+## 项目结构
 
-```
+```text
 mvp/
-鈹溾攢鈹€ backend/        # Django + DRF + Neo4j adapters (trimmed from the main repo)
-鈹溾攢鈹€ frontend/       # Nuxt 3 + shadcn-vue rebuild (black & white theme)
-鈹溾攢鈹€ docker-compose.yml
-鈹斺攢鈹€ README.md
+├── backend/            # Django + DRF + Neo4j 适配层
+├── frontend/           # Nuxt 3 + TypeScript + Pinia + Tailwind
+├── docker-compose.yml  # 本地开发环境编排
+├── docker-compose.prod.yml
+└── README.md
 ```
 
-### Backend
-- Framework: **Django 5 + DRF + SimpleJWT**
-- Apps kept from the main system: `users`, `quiz`, `chatapi`, `graph_api`, `utils`
-- Database: PostgreSQL (default via Docker) with SQLite fallback for local development
-- Neo4j driver embedded for graph + AI risk analysis endpoints
-- `.env.example` lives under `backend/`; copy it to `.env` before booting
+### 后端（backend）
+- 技术栈：**Django 5、Django REST Framework、SimpleJWT**。
+- 保留子应用：`users`、`quiz`、`chatapi`、`graph_api`、`utils`。
+- 数据库：默认 PostgreSQL（Docker），本地可回退至 SQLite。
+- 内置 Neo4j 驱动，用于图谱与 AI 风险分析接口。
+- `.env.example` 位于 `backend/`，复制为 `.env` 后再启动服务。
 
-### Frontend
-- Framework: **Nuxt 3 + TypeScript + Pinia + Tailwind**
-- UI kit: shadcn-vue primitives (button/card/input/etc.) reused from the main project and rethemed to monochrome
-- Pages delivered: `/login`, `/` (dashboard), `/quiz`, `/simulation`, `/graph`, `/profile`
-- Axios wrapper (`plugins/api.ts`) handles auth headers & 401 cleanup
+### 前端（frontend）
+- 技术栈：**Nuxt 3、TypeScript、Pinia、Tailwind CSS**。
+- UI：重用 shadcn-vue 原子组件，并统一黑白配色。
+- 页面：`/login`、`/`（仪表盘）、`/quiz`、`/simulation`、`/graph`、`/profile`。
+- `plugins/api.ts` 中的 Axios 封装负责附加授权头及 401 清理逻辑。
 
-## Running with Docker Compose
+## 使用 Docker Compose 运行
 
-1. **Env config**
+1. **准备环境变量**
    ```bash
    cd mvp/backend
    cp .env.example .env
-   # update secrets/API keys (DASHSCOPE_API_KEY, DB password, etc.)
+   # 根据需要更新 DASHSCOPE_API_KEY、数据库密码等敏感信息
    ```
 
-2. **Boot all services**
+2. **启动全部服务**
    ```bash
    cd mvp
    docker compose up --build
    ```
-   - Backend -> http://localhost:8000
-   - Frontend -> http://localhost:3100（浏览器直接命中 http://localhost:8000/api，容器内 SSR 通过 http://backend:8000/api）
-   - Neo4j browser -> http://localhost:7474
+   - 后端接口：http://localhost:8000
+   - 前端页面：http://localhost:3100（浏览器直接访问后端时命中 http://localhost:8000/api，容器内 SSR 则通过 http://backend:8000/api）
+   - Neo4j Browser：http://localhost:7474
 
-3. **Django migrations / superuser** (run once inside the backend container)
+3. **执行迁移并创建超级用户**（在后端容器中执行一次）
    ```bash
    docker compose exec backend python manage.py migrate
    docker compose exec backend python manage.py createsuperuser
    ```
 
-4. **Neo4j seed data**
+4. **初始化 Neo4j 示例数据**
    ```bash
    cd mvp
    python init_neo4j.py
-   # 鍙€氳繃鍙傛暟瑕嗙洊榛樿杩炴帴淇℃伅锛屼緥濡傦細
+   # 如需覆盖默认连接信息，可附加参数：
    # python init_neo4j.py --uri bolt://localhost:7687 --user neo4j --password mypass
    ```
-   鑴氭湰浼氳嚜鍔ㄨ鍙?`backend/.env` 涓殑 `NEO4J_*` 閰嶇疆锛屽苟鎵ц `backend/neo4j/seed.cypher`锛屼竴娆℃€у啓鍏ヤ笁绫诲吀鍨嬮獥妗堬紙鎶曡祫鐞嗚储 / 鍏娉曞啋鍏?/ 鎯呮劅闄亰锛夊強鍏剁浉鍏冲疄浣擄紙璇堥獥鑰呫€佸彈瀹宠€呫€佸績鐞嗗急鐐广€佽处鎴枫€佹笭閬撱€佷氦鏄撶瓑锛夛紝闅忓悗鍗冲彲鍦?`/graph` 椤甸潰楠岃瘉鍙鍖栨晥鏋溿€?
+   该脚本会自动读取 `backend/.env` 中的 `NEO4J_*` 配置，并执行 `backend/neo4j/seed.cypher`，一次性写入三类主体（投资机构 / 风险事件 / 感知信号）及其关联，随后即可在 `/graph` 页面查看可视化效果。
 
-5. **Quiz seed data**
+5. **导入测验题目**
    ```bash
    cd mvp/backend
-   python scripts/seed_quiz_questions.py           # ??/??????
-   python scripts/seed_quiz_questions.py --reset  # ?????????
+   python scripts/seed_quiz_questions.py           # 导入示例题目
+   python scripts/seed_quiz_questions.py --reset  # 先清空后重新导入
    ```
-   ?????????/??/?????????????????????????? update_or_create????????
+   脚本会通过 `update_or_create` 重复导入，方便在本地或测试环境快速填充题库。
 
-## Production deployment
+## 生产部署
 
-涓€涓弬鑰冪殑鐢熶骇绾х紪鎺掍綅浜?`docker-compose.prod.yml`锛屽寘鍚?Postgres銆丯eo4j銆丏jango/Gunicorn銆丯uxt锛圫SR锛夊拰 Nginx 鍙嶅悜浠ｇ悊銆傚惎鍔ㄦ柟寮忥細
+`docker-compose.prod.yml` 提供了可落地的生产级编排，包含 Postgres、Neo4j、Django（Gunicorn）、Nuxt（SSR）与 Nginx 反向代理。启动方式如下：
 
 ```bash
 cd mvp
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-- Postgres/Neo4j 浣跨敤鎸佷箙鍖栧嵎锛屼細鍦?compose 绗竴娆″惎鍔ㄦ椂鍒涘缓瀹瑰櫒銆?- backend 瀹瑰櫒鐨勫叆鍙ｈ剼鏈細鑷姩鎵ц `migrate` / `collectstatic`锛屽苟鍦?Neo4j 灏辩华鍚庡皾璇曞鍏?`backend/neo4j/seed.cypher`銆?- frontend 瀹瑰櫒杩愯 Nuxt 鐨?Node 鏈嶅姟鍣紝Nginx 鏆撮湶鍦?`:80`锛屽悓鏃跺皢 `/api/*` 浠ｇ悊鍒?Django锛屽叾浠栬姹傝浆鍙戝埌 Nuxt锛屾祻瑙堝櫒璁块棶 `http://<鏈嶅姟鍣↖P>/` 鍗冲彲銆?
-## Key API slices
+- Postgres / Neo4j 使用持久化卷，首次启动时自动创建。
+- backend 容器会在启动后自动执行 `migrate`、`collectstatic`，并在 Neo4j 准备就绪后导入 `backend/neo4j/seed.cypher`。
+- frontend 容器运行 Nuxt Node 服务，Nginx 监听 `:80`，将 `/api/*` 代理至 Django，其余请求转发给 Nuxt，浏览器访问 `http://<服务器 IP>/` 即可。
 
-| Area | Endpoint | Notes |
-| ---- | -------- | ----- |
-| Auth | `POST /api/users/login/` | JWT login (username / email / phone) |
-| Users | `GET/PUT /api/users/profile/` | Basic profile + avatar URL |
-| Quiz | `GET /api/quiz/questions/` | Level + limit filters |
-| Quiz admin | `POST /api/quiz/admin/questions/` | Admin only (`user_type == 'admin'`) |
-| Simulation | `POST /api/chat/` | Session-based AI scenario, returns score/messages |
-| Simulation | `POST /api/chat/generate-report/` | Generates textual analysis |
-| Graph | `GET /api/graph/initial/` | Entry graph payload for the ECharts view |
+## 关键 API
 
-## Frontend routes
+| 模块 | Endpoint | 说明 |
+| ---- | -------- | ---- |
+| Auth | `POST /api/users/login/` | 用户名 / 邮箱 / 手机号登录，返回 JWT |
+| Users | `GET/PUT /api/users/profile/` | 用户基本资料及头像地址 |
+| Quiz | `GET /api/quiz/questions/` | 支持难度、数量筛选 |
+| Quiz 管理 | `POST /api/quiz/admin/questions/` | 管理员（`user_type == 'admin'`）维护题库 |
+| Simulation | `POST /api/chat/` | 会话式 AI 情景模拟，返回评分与对话内容 |
+| Simulation | `POST /api/chat/generate-report/` | 根据对话生成文字分析报告 |
+| Graph | `GET /api/graph/initial/` | 获取初始图谱数据，用于前端 ECharts 可视化 |
 
-| Route | Purpose |
-| ----- | ------- |
-| `/login` | Minimal login screen (black/white shadcn card) |
-| `/` | Dashboard: stats cards + quick actions |
-| `/quiz` | Quiz runner + admin question pane |
-| `/simulation` | AI anti-fraud chat surface + report generation |
-| `/graph` | Force-directed graph view + search |
-| `/profile` | Profile editor & notification toggles |
+## 前端路由速览
 
-## Development hints
+| 路由 | 作用 |
+| ---- | ---- |
+| `/login` | 极简登录页（黑白主题 shadcn 卡片） |
+| `/` | 仪表盘：统计卡片 + 快捷入口 |
+| `/quiz` | 测验执行与题库管理界面 |
+| `/simulation` | AI 反欺诈对话与报告生成 |
+| `/graph` | 力导向图谱视图 + 搜索 |
+| `/profile` | 个人资料与通知设置 |
 
-- **Backend**: `python manage.py runserver` inside `mvp/backend` still works for quick hacking (defaults to SQLite).
-- **Frontend**: `npm install && npm run dev` under `mvp/frontend` (port 3100, API proxied via `/api`).
-- **Admin seed**: 任意 `createsuperuser` 或 `is_staff` 账号都会自动拥有测验管理权限（仍可按需手动把 `user_type` 设为 `admin`）。
-- **Quiz seed**: `python backend/scripts/seed_quiz_questions.py` 可重复导入预置题目，便于本地/测试环境快速填充题库。
+## 开发建议
 
-## Next steps (optional)
-- Add proper toast/snackbar component instead of the temporary `window.alert` helper.
-- Wire up refresh-token flow on the frontend (interceptor currently just clears cookies on 401).
-- Expand the graph sidebar with metadata filters (types/regions) if needed.
+- **后端**：在 `mvp/backend` 中执行 `python manage.py runserver` 可快速调试（默认使用 SQLite）。
+- **前端**：进入 `mvp/frontend` 执行 `npm install && npm run dev`（端口 3100，代理 `/api`）。
+- **管理员与测验**：任意 `createsuperuser` 或 `is_staff` 账号自动拥有测验管理权限，可按需将 `user_type` 设置为 `admin`；`python backend/scripts/seed_quiz_questions.py` 可重复导入预置题目。
 
+## 后续可选迭代
 
+- 替换临时的 `window.alert` 为正式的通知组件。
+- 前端加入刷新 Token 的流程（目前 401 时仅清理 Cookie）。
+- 在图谱侧边栏补充更多筛选条件，例如主体类型、地区等。
