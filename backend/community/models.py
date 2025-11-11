@@ -45,11 +45,14 @@ class Community(models.Model):
 
 class CommunityMembership(models.Model):
     ROLE_MEMBER = "member"
+    ROLE_ADMIN = "admin"
     ROLE_MODERATOR = "moderator"
     ROLE_CHOICES = (
         (ROLE_MEMBER, "成员"),
-        (ROLE_MODERATOR, "管理员"),
+        (ROLE_ADMIN, "社区管理员"),
+        (ROLE_MODERATOR, "协管"),
     )
+    MODERATOR_ROLES = {ROLE_ADMIN, ROLE_MODERATOR}
 
     community = models.ForeignKey(
         Community,
@@ -74,7 +77,15 @@ class CommunityMembership(models.Model):
 
     @property
     def is_moderator(self) -> bool:
-        return self.role == self.ROLE_MODERATOR
+        return self.role in self.MODERATOR_ROLES
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == self.ROLE_ADMIN
+
+    @property
+    def can_moderate(self) -> bool:
+        return self.role in self.MODERATOR_ROLES
 
 
 class Post(models.Model):

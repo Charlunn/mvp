@@ -13,7 +13,11 @@ from dotenv import load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+
+# Load env vars from the repo root first (preferred), then allow local overrides.
+for env_path in (BASE_DIR.parent / ".env", BASE_DIR / ".env"):
+    if env_path.exists():
+        load_dotenv(env_path)
 
 
 # ---------------------------------------------------------------------------

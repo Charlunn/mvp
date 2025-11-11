@@ -62,7 +62,7 @@ mvp/
    # 如需覆盖默认连接信息，可附加参数：
    # python init_neo4j.py --uri bolt://localhost:7687 --user neo4j --password mypass
    ```
-   该脚本会自动读取 `backend/.env` 中的 `NEO4J_*` 配置，并执行 `backend/neo4j/seed.cypher`，一次性写入三类主体（投资机构 / 风险事件 / 感知信号）及其关联，随后即可在 `/graph` 页面查看可视化效果。
+   该脚本会自动读取根目录 `.env` 中的 `NEO4J_*` 配置，并执行 `backend/neo4j/seed.cypher`，一次性写入三类主体（投资机构 / 风险事件 / 感知信号）及其关联，随后即可在 `/graph` 页面查看可视化效果。
 
 5. **导入测验题目**
    ```bash
@@ -82,7 +82,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 - Postgres / Neo4j 使用持久化卷，首次启动时自动创建。
-- backend 容器会在启动后自动执行 `migrate`、`collectstatic`，并在 Neo4j 准备就绪后导入 `backend/neo4j/seed.cypher`。
+- backend 容器会在启动后自动执行 `migrate`、`collectstatic`，导入题库、确保默认管理员 Charlun 存在，并在 Neo4j 准备就绪后导入 `backend/neo4j/seed.cypher`（legacy + Cypher 双数据源）。
 - frontend 容器运行 Nuxt Node 服务，Nginx 监听 `:80`，将 `/api/*` 代理至 Django，其余请求转发给 Nuxt，浏览器访问 `http://<服务器 IP>/` 即可。
 
 ## 关键 API

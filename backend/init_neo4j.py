@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Dict
 
 ROOT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = ROOT_DIR.parent
 BACKEND_DIR = ROOT_DIR
 sys.path.insert(0, str(BACKEND_DIR))
 
@@ -24,7 +25,7 @@ except ImportError as exc:  # pragma: no cover - informative error only
         "缺少 backend/scripts 里的 seeding 模块或其依赖。请先执行 `cd mvp/backend && pip install -r requirements.txt`。"
     ) from exc
 
-DEFAULT_ENV = BACKEND_DIR / ".env"
+DEFAULT_ENV = PROJECT_ROOT / ".env"
 SEED_FILE = BACKEND_DIR / "neo4j" / "seed.cypher"
 
 

@@ -5,13 +5,13 @@ services:
     image: postgres:15-alpine
     container_name: antifraud-prod-postgres
     environment:
-      POSTGRES_DB: antifraud
-      POSTGRES_USER: antifraud
-      POSTGRES_PASSWORD: antifraud
+      POSTGRES_DB: ${DB_NAME:-antifraud}
+      POSTGRES_USER: ${DB_USER:-antifraud}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-antifraud}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U antifraud"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-antifraud}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,11 +24,20 @@ services:
     image: neo4j:5
     container_name: antifraud-prod-neo4j
     environment:
-      NEO4J_AUTH: neo4j/neo4j-password
+      NEO4J_AUTH: ${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:-neo4j-password}
       NEO4J_dbms_memory_pagecache_size: 512M
       NEO4J_dbms_memory_heap_max__size: 512M
     volumes:
       - neo4j_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/var/lib/neo4j/bin/cypher-shell --non-interactive -u ${NEO4J_USERNAME:-neo4j} -p ${NEO4J_PASSWORD:-neo4j-password} 'RETURN 1;' || exit 1",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
     networks:
       - antifraud_prod
     ports:
@@ -40,14 +49,14 @@ services:
       context: ./backend
     container_name: antifraud-prod-backend
     env_file:
-      - ./backend/.env
+      - ./.env
     volumes:
       - backend_media:/app/media
     depends_on:
       postgres:
         condition: service_healthy
       neo4j:
-        condition: service_started
+        condition: service_healthy
     networks:
       - antifraud_prod
 
@@ -56,11 +65,11 @@ services:
       context: ./frontend
     container_name: antifraud-prod-frontend
     environment:
-      NUXT_PUBLIC_API_BASE: /api
-      NUXT_SERVER_API_BASE: http://backend:8000/api
-      HOST: 0.0.0.0
-      PORT: 3000
-      NITRO_PORT: 3000
+      NUXT_PUBLIC_API_BASE: ${NUXT_PUBLIC_API_BASE:-/api}
+      NUXT_SERVER_API_BASE: ${NUXT_SERVER_API_BASE:-http://backend:8000/api}
+      HOST: ${FRONTEND_HOST:-0.0.0.0}
+      PORT: ${FRONTEND_PORT:-3000}
+      NITRO_PORT: ${FRONTEND_NITRO_PORT:-3000}
     depends_on:
       backend:
         condition: service_started

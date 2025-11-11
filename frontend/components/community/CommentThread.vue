@@ -19,6 +19,14 @@
       <p class="mt-3 whitespace-pre-line text-foreground">{{ comment.body }}</p>
       <div class="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
         <button class="hover:text-foreground" @click="toggleReply">{{ replying ? '取消回复' : '回复' }}</button>
+        <button
+          v-if="comment.can_moderate"
+          class="hover:text-destructive disabled:opacity-50"
+          :disabled="deleting"
+          @click="handleDelete"
+        >
+          {{ deleting ? '删除中...' : '删除' }}
+        </button>
       </div>
     </div>
     <div v-if="replying" class="mt-3 space-y-2">
@@ -70,6 +78,7 @@ interface CommentModel {
   like_count: number
   is_liked: boolean
   is_deleted: boolean
+  can_moderate: boolean
   author: AuthorSummary
   replies?: CommentModel[]
 }
@@ -78,6 +87,7 @@ const props = defineProps<{
   comment: CommentModel
   onLike: (id: number) => Promise<unknown>
   onReply: (id: number, content: string) => Promise<unknown>
+  onDelete?: (id: number) => Promise<unknown>
   formatDate: (value: string) => string
   auth: { isAuthenticated: boolean }
   depth: number // 添加 depth prop
@@ -91,6 +101,7 @@ const replying = ref(false)
 const replyContent = ref('')
 const loading = ref(false)
 const isCollapsed = ref(false) // 新增：控制评论折叠状态
+const deleting = ref(false)
 
 const toggleCollapse = () => {
   isCollapsed.value = !isCollapsed.value
@@ -121,6 +132,16 @@ const handleLike = async () => {
     await props.onLike(props.comment.id)
   } finally {
     loading.value = false
+  }
+}
+
+const handleDelete = async () => {
+  if (!props.onDelete || deleting.value) return
+  deleting.value = true
+  try {
+    await props.onDelete(props.comment.id)
+  } finally {
+    deleting.value = false
   }
 }
 </script>

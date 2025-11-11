@@ -17,6 +17,7 @@ from .models import (
     PostImage,
     PostLike,
 )
+from .utils import has_moderation_power, is_system_admin
 
 
 class UserSummarySerializer(serializers.ModelSerializer):
@@ -128,12 +129,26 @@ class PostSerializer(serializers.ModelSerializer):
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         community: Community = attrs.get("community") or getattr(self.instance, "community", None)
         if not community:
-            raise serializers.ValidationError("帖子必须属于一个社区")
+            raise serializers.ValidationError({"community": "帖子必须属于一个社区"})
+
         request = self.context.get("request")
-        if request and request.user and request.user.is_authenticated:
-            if community.is_private:
-                if not community.memberships.filter(user=request.user).exists() and not request.user.is_staff and not request.user.is_superuser:
-                    raise serializers.ValidationError("你不是该社区成员，无法发帖")
+        user = getattr(request, "user", None)
+        if user and user.is_authenticated:
+            if community.is_private and not (
+                is_system_admin(user) or community.memberships.filter(user=user).exists()
+            ):
+                raise serializers.ValidationError("你不是该社区成员，无法在该社区发帖")
+
+            if self.instance and "community" in attrs:
+                target = attrs["community"]
+                if target.id != self.instance.community_id:
+                    if not has_moderation_power(user, self.instance.community):
+                        raise serializers.ValidationError("你没有权限移动该帖子")
+                    if not has_moderation_power(user, target):
+                        raise serializers.ValidationError("没有权限将帖子移动到目标社区")
+        elif request and request.method and request.method.upper() != "GET":
+            raise serializers.ValidationError("登录后才能执行该操作")
+
         return attrs
 
     def get_like_count(self, obj: Post) -> int:
@@ -153,13 +168,9 @@ class PostSerializer(serializers.ModelSerializer):
         if not request or not request.user or not request.user.is_authenticated:
             return False
         user = request.user
-        if getattr(user, "is_superuser", False) or getattr(user, "is_staff", False) or getattr(user, "user_type", "") == "admin":
+        if obj.author_id == user.id:
             return True
-        try:
-            membership = obj.community.memberships.get(user=user)
-            return membership.role == CommunityMembership.ROLE_MODERATOR
-        except CommunityMembership.DoesNotExist:
-            return False
+        return has_moderation_power(user, obj.community)
 
     def get_comments(self, obj: Post):
         if not self.context.get("include_comments"):
@@ -236,15 +247,13 @@ class CommentSerializer(serializers.ModelSerializer):
         if not request or not request.user or not request.user.is_authenticated:
             return False
         user = request.user
-        if getattr(user, "is_superuser", False) or getattr(user, "is_staff", False) or getattr(user, "user_type", "") == "admin":
+        if is_system_admin(user):
             return True
         if obj.author_id == user.id:
             return True
-        try:
-            membership = obj.post.community.memberships.get(user=user)
-            return membership.role == CommunityMembership.ROLE_MODERATOR
-        except CommunityMembership.DoesNotExist:
-            return False
+        if obj.post.author_id == user.id:
+            return True
+        return has_moderation_power(user, obj.post.community)
 
     MAX_COMMENT_DEPTH = 5 # 定义最大评论嵌套深度
 

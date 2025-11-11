@@ -7,9 +7,15 @@ python manage.py migrate --noinput
 echo "[backend] Collecting static files..."
 python manage.py collectstatic --noinput
 
-echo "[backend] Seeding Neo4j data (safe to rerun with legacy dataset)..."
+echo "[backend] Seeding quiz question bank..."
+python scripts/seed_quiz_questions.py
+
+echo "[backend] Ensuring default admin user..."
+python manage.py ensure_default_admin
+
+echo "[backend] Seeding Neo4j data (legacy + seed.cypher)..."
 retries=10
-until python init_neo4j.py --dataset=legacy; do
+until python init_neo4j.py --dataset=both; do
   retries=$((retries-1))
   if [ "$retries" -le 0 ]; then
     echo "[backend] Neo4j seed failed after multiple attempts. Continuing without seed."

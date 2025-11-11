@@ -23,7 +23,7 @@
             <img v-for="image in post.images" :key="image.id" :src="resolveMedia(image.image)" class="h-64 w-full rounded-lg object-cover" />
           </div>
         </CardContent>
-        <CardFooter class="flex items-center justify-between text-sm text-muted-foreground">
+        <CardFooter class="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
           <div class="flex items-center gap-4">
             <button class="flex items-center gap-1" :class="post.is_liked ? 'text-primary' : ''" @click="togglePostLike">
               <Icon :name="post.is_liked ? 'lucide:heart' : 'lucide:heart-off'" class="h-4 w-4" />
@@ -34,10 +34,67 @@
               <span>{{ post.comment_count }}</span>
             </div>
           </div>
-          <Button variant="ghost" size="sm" @click="navigateTo(`/community/${post.community_detail.slug}`)">
-            返回社区
-          </Button>
+          <div class="flex flex-wrap items-center gap-2">
+            <Button variant="ghost" size="sm" @click="navigateTo(`/community/${post.community_detail.slug}`)">
+              返回社区
+            </Button>
+            <Button
+              v-if="post.can_moderate"
+              variant="outline"
+              size="sm"
+              @click="startEdit"
+            >
+              编辑 / 移动
+            </Button>
+            <Button
+              v-if="post.can_moderate"
+              variant="destructive"
+              size="sm"
+              :disabled="deleteLoading"
+              @click="deleteCurrentPost"
+            >
+              {{ deleteLoading ? '删除中...' : '删除帖子' }}
+            </Button>
+          </div>
         </CardFooter>
+      </Card>
+
+      <Card v-if="editing" class="border border-border/70">
+        <CardHeader>
+          <CardTitle>编辑 / 移动帖子</CardTitle>
+          <CardDescription>更新帖子内容或调整所属社区。</CardDescription>
+        </CardHeader>
+        <CardContent class="space-y-4">
+          <div>
+            <Label for="edit-community">选择社区</Label>
+            <select
+              id="edit-community"
+              v-model="editForm.community"
+              class="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              :disabled="communitiesLoading || !communities.length"
+              required
+            >
+              <option value="" disabled>请选择社区</option>
+              <option v-for="community in communities" :key="community.id" :value="String(community.id)">
+                {{ community.name }}
+              </option>
+            </select>
+          </div>
+          <div>
+            <Label for="edit-title">标题</Label>
+            <Input id="edit-title" v-model="editForm.title" required />
+          </div>
+          <div>
+            <Label for="edit-body">内容</Label>
+            <Textarea id="edit-body" v-model="editForm.body" rows="4" required />
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <Button :disabled="editLoading" type="button" @click="submitEdit">
+              {{ editLoading ? '保存中...' : '保存修改' }}
+            </Button>
+            <Button type="button" variant="ghost" @click="cancelEdit">取消</Button>
+          </div>
+        </CardContent>
       </Card>
 
       <Card class="border border-border/70">
@@ -73,6 +130,7 @@
             :comment="comment"
             :on-like="handleCommentLike"
             :on-reply="handleReplySubmit"
+            :on-delete="handleCommentDelete"
             :format-date="formatDate"
             :auth="auth"
             :depth="0"
@@ -114,6 +172,7 @@ interface CommentModel {
   like_count: number
   is_liked: boolean
   is_deleted: boolean
+  can_moderate: boolean
   author: PostAuthor
   replies: CommentModel[]
   post: number
@@ -131,6 +190,7 @@ interface PostDetail {
   like_count: number
   comment_count: number
   is_liked: boolean
+  can_moderate: boolean
   comments: CommentModel[]
 }
 
@@ -144,6 +204,16 @@ const post = ref<PostDetail | null>(null)
 const loading = ref(true)
 const commentLoading = ref(false)
 const newComment = ref('')
+const communities = ref<CommunitySummary[]>([])
+const communitiesLoading = ref(false)
+const editing = ref(false)
+const editLoading = ref(false)
+const deleteLoading = ref(false)
+const editForm = reactive({
+  title: '',
+  body: '',
+  community: '',
+})
 
 const fetchPost = async () => {
   loading.value = true
@@ -155,6 +225,18 @@ const fetchPost = async () => {
     post.value = null
   } finally {
     loading.value = false
+  }
+}
+
+const fetchCommunities = async () => {
+  communitiesLoading.value = true
+  try {
+    const { data } = await $api.get('/community/communities/', { params: { page_size: 100 } })
+    communities.value = Array.isArray(data) ? data : data.results || []
+  } catch (error) {
+    console.error('加载社区列表失败', error)
+  } finally {
+    communitiesLoading.value = false
   }
 }
 
@@ -224,6 +306,83 @@ const togglePostLike = async () => {
   }
 }
 
+const startEdit = () => {
+  if (!post.value) return
+  editForm.title = post.value.title
+  editForm.body = post.value.body
+  editForm.community = String(post.value.community_detail.id)
+  editing.value = true
+}
+
+const cancelEdit = () => {
+  editing.value = false
+}
+
+const submitEdit = async () => {
+  if (!post.value) return
+  if (!editForm.title.trim() || !editForm.body.trim()) {
+    window.alert('标题和内容不能为空')
+    return
+  }
+  if (!editForm.community) {
+    window.alert('请选择要移动到的社区')
+    return
+  }
+  editLoading.value = true
+  try {
+    await $api.patch(`/community/posts/${post.value.id}/`, {
+      title: editForm.title,
+      body: editForm.body,
+      community: Number(editForm.community),
+    })
+    editing.value = false
+    await fetchPost()
+    window.alert('帖子已更新')
+  } catch (error) {
+    console.error('更新帖子失败', error)
+    const axiosError = error as AxiosError<{ detail?: string }>
+    window.alert(axiosError.response?.data?.detail || '更新失败，请稍后重试')
+  } finally {
+    editLoading.value = false
+  }
+}
+
+const deleteCurrentPost = async () => {
+  if (!post.value) return
+  if (!window.confirm('确定删除该帖子吗？删除后将无法恢复。')) {
+    return
+  }
+  deleteLoading.value = true
+  try {
+    await $api.delete(`/community/posts/${post.value.id}/`)
+    window.alert('帖子已删除')
+    navigateTo('/community')
+  } catch (error) {
+    console.error('删除帖子失败', error)
+    window.alert('删除失败，请稍后重试')
+  } finally {
+    deleteLoading.value = false
+  }
+}
+
+const handleCommentDelete = async (commentId: number) => {
+  if (!auth.isAuthenticated) {
+    window.alert('请先登录后再操作')
+    return
+  }
+  if (!window.confirm('确定删除该评论吗？')) {
+    return
+  }
+  try {
+    await $api.delete(`/community/comments/${commentId}/`)
+    await fetchPost()
+  } catch (error) {
+    console.error('删除评论失败', error)
+    const axiosError = error as AxiosError<{ detail?: string }>
+    window.alert(axiosError.response?.data?.detail || '删除失败，请稍后重试')
+  }
+}
+
 const resolveMedia = (path: string) => {
   if (!path) return ''
   if (path.startsWith('http')) return path
@@ -251,4 +410,8 @@ watch(
   },
   { immediate: true }
 )
+
+onMounted(() => {
+  fetchCommunities()
+})
 </script>

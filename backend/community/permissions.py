@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from rest_framework import permissions
 
-from .models import Comment, CommunityMembership, Post
+from .models import Comment, Post
+from .utils import has_moderation_power, is_system_admin
 
 
 class IsCommunityModeratorOrAuthor(permissions.BasePermission):
@@ -26,38 +25,20 @@ class IsCommunityModeratorOrAuthor(permissions.BasePermission):
             return False
 
         # System admins (staff/superuser) have all permissions
-        if user.is_staff or user.is_superuser:
+        if is_system_admin(user):
             return True
 
-        # The author of the object can always modify it
-        author = getattr(obj, "author", None)
-        if author and author.id == user.id:
-            return True
-
-        # For objects within a community (like Post or Comment),
-        # check for community admin/moderator role.
-        community = None
         if isinstance(obj, Post):
-            community = obj.community
-        elif isinstance(obj, Comment):
-            community = obj.post.community
+            if getattr(obj, "author_id", None) == user.id:
+                return True
+            return has_moderation_power(user, obj.community)
 
-        if community:
-            try:
-                membership = community.memberships.get(user=user)
-                return membership.role in [CommunityMembership.ROLE_ADMIN, CommunityMembership.ROLE_MODERATOR]
-            except CommunityMembership.DoesNotExist:
-                return False
+        if isinstance(obj, Comment):
+            if getattr(obj, "author_id", None) == user.id:
+                return True
+            if getattr(obj.post, "author_id", None) == user.id:
+                return True
+            return has_moderation_power(user, obj.post.community)
 
+        # Default deny for unknown objects
         return False
-
-
-def _get_membership(manager, user_id: int) -> Optional[CommunityMembership]:
-    try:
-        return manager.get(user_id=user_id)
-    except CommunityMembership.DoesNotExist:
-        return None
-
-
-def author_id(author):
-    return getattr(author, "id", None)
