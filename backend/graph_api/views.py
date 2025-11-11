@@ -1,35 +1,25 @@
-﻿from django.shortcuts import render
-
-# Create your views here.
 import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from neo4j.exceptions import ServiceUnavailable, CypherSyntaxError, Neo4jError
-from typing import Dict, Any, List, Optional
 
-from . import db_utils
-from . import cypher_queries
 from .db_utils import (
-    read_from_neo4j, 
-    write_to_neo4j, 
-    batch_write_to_neo4j,
-    execute_transaction,
+    read_from_neo4j,
+    write_to_neo4j,
     validate_node_exists,
     validate_relationship_exists,
-    create_graph_projection,
-    drop_graph_projection
 )
 from .cypher_queries import (
-    # 鍩虹鏌ヨ
+    # 基础查询
     GET_INITIAL_GRAPH_CYPHER,
     GET_FILTERED_GRAPH_CYPHER,
     FILTER_GRAPH_CYPHER,
     SEARCH_GRAPH_CYPHER,
     EXPAND_NODE_CYPHER,
     GET_NODE_DETAIL_CYPHER,
-    # 鑺傜偣CRUD
+    # 节点 CRUD
     CREATE_NODE_CYPHER,
     GET_NODE_BY_ID_CYPHER,
     GET_NODES_BY_PROPERTY_CYPHER,
@@ -37,14 +27,14 @@ from .cypher_queries import (
     UPDATE_NODE_CYPHER,
     DELETE_NODE_CYPHER,
     BATCH_DELETE_NODES_CYPHER,
-    # 鍏崇郴CRUD
+    # 关系 CRUD
     CREATE_RELATIONSHIP_CYPHER,
     GET_RELATIONSHIP_BY_ID_CYPHER,
     GET_RELATIONSHIPS_BETWEEN_NODES_CYPHER,
     GET_NODE_RELATIONSHIPS_CYPHER,
     UPDATE_RELATIONSHIP_CYPHER,
     DELETE_RELATIONSHIP_CYPHER,
-    # 楂樼骇鍒嗘瀽
+    # 高级分析
     SHORTEST_PATH_CYPHER,
     ALL_PATHS_CYPHER,
     K_HOP_NEIGHBORS_CYPHER,
@@ -55,13 +45,13 @@ from .cypher_queries import (
     COMMUNITY_DETECTION_LPA_CYPHER,
     TRIANGLE_COUNT_CYPHER,
     CLUSTERING_COEFFICIENT_CYPHER,
-    # 缁熻鏌ヨ
+    # 统计查询
     NODE_TYPE_DISTRIBUTION_CYPHER,
     RELATIONSHIP_TYPE_DISTRIBUTION_CYPHER,
     GRAPH_BASIC_STATS_CYPHER,
     NODE_DEGREE_DISTRIBUTION_CYPHER,
     CONNECTED_COMPONENTS_CYPHER,
-    # 澶嶆潅鏌ヨ
+    # 复杂查询
     TIME_RANGE_FILTER_CYPHER,
     PROPERTY_FILTER_CYPHER,
     MULTI_HOP_QUERY_CYPHER,
@@ -69,61 +59,61 @@ from .cypher_queries import (
     TOP_DEGREE_NODES_CYPHER,
     NODE_LABEL_USAGE_CYPHER,
     RELATIONSHIP_USAGE_CYPHER,
-    UNIVERSAL_SEARCH_CYPHER
+    UNIVERSAL_SEARCH_CYPHER,
 )
 from . import serializers
 
 logger = logging.getLogger(__name__)
 
 
-# ==================== 鍩虹瑙嗗浘绫?====================
+# ==================== 基础视图类 ====================
+
 
 class BaseGraphAPIView(APIView):
-    """
-    鍥炬暟鎹簱API鐨勫熀纭€瑙嗗浘绫伙紝鎻愪緵閫氱敤鐨勯敊璇鐞嗗拰鏉冮檺鎺у埗
-    """
+    """图数据库 API 的基础视图类，提供统一的权限控制与异常处理。"""
+
     permission_classes = [IsAuthenticated]
-    
+
     def handle_exception(self, exc):
-        """
-        缁熶竴鐨勫紓甯稿鐞?        """
+        """统一处理 Neo4j 相关异常，返回更友好的中文提示。"""
         if isinstance(exc, ServiceUnavailable):
-            logger.error(f"Neo4j鏈嶅姟涓嶅彲鐢? {exc}")
+            logger.error(f"Neo4j 服务不可用: {exc}")
             return Response(
-                {'error': 'Neo4j鏁版嵁搴撴湇鍔′笉鍙敤锛岃绋嶅悗閲嶈瘯'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
+                {'error': 'Neo4j 数据库服务不可用，请稍后重试'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-        elif isinstance(exc, CypherSyntaxError):
-            logger.error(f"Cypher璇硶閿欒: {exc}")
+        if isinstance(exc, CypherSyntaxError):
+            logger.error(f"Cypher 语法错误: {exc}")
             return Response(
-                {'error': 'Cypher鏌ヨ璇硶閿欒'},
-                status=status.HTTP_400_BAD_REQUEST
+                {'error': 'Cypher 查询语法错误'},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        elif isinstance(exc, Neo4jError):
-            logger.error(f"Neo4j閿欒: {exc}")
+        if isinstance(exc, Neo4jError):
+            logger.error(f"Neo4j 错误: {exc}")
             return Response(
-                {'error': f'Neo4j鏁版嵁搴撻敊璇? {str(exc)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': f'Neo4j 数据库错误：{str(exc)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-        else:
-            logger.error(f"鏈煡閿欒: {exc}")
-            return super().handle_exception(exc)
+
+        logger.error(f"未知错误: {exc}")
+        return super().handle_exception(exc)
 
 
-# ==================== 鑺傜偣 CRUD 鎿嶄綔瑙嗗浘 ====================
+# ==================== 节点 CRUD 视图 ====================
+
 
 class NodeCRUDView(BaseGraphAPIView):
-    """
-    鑺傜偣鐨勫鍒犳敼鏌ユ搷浣滆鍥?    """
-    
+    """节点的增删改查接口视图，封装常用的 Neo4j 操作。"""
+
     def post(self, request):
         """
-        鍒涘缓鏂拌妭鐐?        
-        璇锋眰浣?
+        创建新节点。
+
+        请求体示例：
         {
             "label": "User",
             "properties": {
-                "name": "寮犱笁",
+                "name": "张三",
                 "age": 30,
                 "email": "zhangsan@example.com"
             }
@@ -132,41 +122,43 @@ class NodeCRUDView(BaseGraphAPIView):
         try:
             label = request.data.get('label')
             properties = request.data.get('properties', {})
-            
+
             if not label:
                 return Response(
                     {'error': 'Label is required'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            
-            # 鏋勫缓鍔ㄦ€丆ypher鏌ヨ
+
+            # 拼接 Cypher 语句并写入节点属性
             cypher_query = f"CREATE (n:{label} $properties) RETURN n"
-            
             results, summary = write_to_neo4j(cypher_query, {'properties': properties})
-            
-            logger.info(f"鐢ㄦ埛 {request.user.id} 鍒涘缓鑺傜偣鎴愬姛: {summary}")
-            return Response({
-                'message': 'Node created successfully',
-                'data': results,
-                'summary': summary
-            }, status=status.HTTP_201_CREATED)
-            
-        except Exception as e:
-            logger.error(f"鍒涘缓鑺傜偣澶辫触: {e}")
+
+            logger.info(f"用户 {request.user.id} 创建节点成功: {summary}")
             return Response(
-                {'error': 'Failed to create node', 'details': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {
+                    'message': 'Node created successfully',
+                    'data': results,
+                    'summary': summary,
+                },
+                status=status.HTTP_201_CREATED,
             )
-    
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"创建节点失败: {exc}")
+            return Response(
+                {'error': 'Failed to create node', 'details': str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
     def get(self, request):
         """
-        鑾峰彇鑺傜偣淇℃伅
-        
-        鏌ヨ鍙傛暟:
-        - node_id: 鑺傜偣ID
-        - label: 鑺傜偣鏍囩
-        - property: 灞炴€у悕
-        - value: 灞炴€у€?        - limit: 缁撴灉闄愬埗鏁伴噺
+        获取节点信息。
+
+        查询参数：
+        - node_id: 节点 ID
+        - label: 节点标签
+        - property: 属性名
+        - value: 属性值
+        - limit: 返回数量限制
         """
         try:
             node_id = request.query_params.get('node_id')
@@ -174,48 +166,55 @@ class NodeCRUDView(BaseGraphAPIView):
             property_name = request.query_params.get('property')
             property_value = request.query_params.get('value')
             limit = int(request.query_params.get('limit', 50))
-            
+
             if node_id:
-                # 鏍规嵁ID鑾峰彇鑺傜偣
+                # 按 ID 获取节点
                 results = read_from_neo4j(GET_NODE_BY_ID_CYPHER, {'node_id': node_id})
             elif label and property_name and property_value:
-                # 鏍规嵁灞炴€ц幏鍙栬妭鐐?                cypher_query = f"MATCH (n:{label}) WHERE n.{property_name} = $value RETURN n LIMIT $limit"
-                results = read_from_neo4j(cypher_query, {
-                    'value': property_value,
-                    'limit': limit
-                })
+                # 按属性获取节点
+                cypher_query = f"MATCH (n:{label}) WHERE n.{property_name} = $value RETURN n LIMIT $limit"
+                results = read_from_neo4j(
+                    cypher_query,
+                    {
+                        'value': property_value,
+                        'limit': limit,
+                    },
+                )
             elif label:
-                # 鏍规嵁鏍囩鑾峰彇鑺傜偣
+                # 按标签获取节点
                 cypher_query = f"MATCH (n:{label}) RETURN n LIMIT $limit"
                 results = read_from_neo4j(cypher_query, {'limit': limit})
             else:
                 return Response(
                     {'error': 'node_id or label is required'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            
-            logger.info(f"鐢ㄦ埛 {request.user.id} 鑾峰彇鑺傜偣淇℃伅鎴愬姛")
-            return Response({
-                'message': 'Nodes retrieved successfully',
-                'data': results,
-                'count': len(results)
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            logger.error(f"鑾峰彇鑺傜偣淇℃伅澶辫触: {e}")
+
+            logger.info(f"用户 {request.user.id} 获取节点信息成功")
             return Response(
-                {'error': 'Failed to retrieve nodes', 'details': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {
+                    'message': 'Nodes retrieved successfully',
+                    'data': results,
+                    'count': len(results),
+                },
+                status=status.HTTP_200_OK,
             )
-    
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"获取节点信息失败: {exc}")
+            return Response(
+                {'error': 'Failed to retrieve nodes', 'details': str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
     def put(self, request):
         """
-        鏇存柊鑺傜偣灞炴€?        
-        璇锋眰浣?
+        更新节点属性。
+
+        请求体示例：
         {
             "node_id": "node_element_id",
             "properties": {
-                "name": "鏉庡洓",
+                "name": "李四",
                 "age": 25
             }
         }
@@ -223,98 +222,106 @@ class NodeCRUDView(BaseGraphAPIView):
         try:
             node_id = request.data.get('node_id')
             properties = request.data.get('properties', {})
-            
+
             if not node_id:
                 return Response(
                     {'error': 'node_id is required'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            
+
             if not validate_node_exists(node_id):
                 return Response(
                     {'error': 'Node not found'},
-                    status=status.HTTP_404_NOT_FOUND
+                    status=status.HTTP_404_NOT_FOUND,
                 )
-            
-            results, summary = write_to_neo4j(UPDATE_NODE_CYPHER, {
-                'node_id': node_id,
-                'properties': properties
-            })
-            
-            logger.info(f"鐢ㄦ埛 {request.user.id} 鏇存柊鑺傜偣鎴愬姛: {summary}")
-            return Response({
-                'message': 'Node updated successfully',
-                'data': results,
-                'summary': summary
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            logger.error(f"鏇存柊鑺傜偣澶辫触: {e}")
-            return Response(
-                {'error': 'Failed to update node', 'details': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+
+            results, summary = write_to_neo4j(
+                UPDATE_NODE_CYPHER,
+                {
+                    'node_id': node_id,
+                    'properties': properties,
+                },
             )
-    
+
+            logger.info(f"用户 {request.user.id} 更新节点成功: {summary}")
+            return Response(
+                {
+                    'message': 'Node updated successfully',
+                    'data': results,
+                    'summary': summary,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"更新节点失败: {exc}")
+            return Response(
+                {'error': 'Failed to update node', 'details': str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
     def delete(self, request):
         """
-        鍒犻櫎鑺傜偣
-        
-        璇锋眰浣?
+        删除节点，可处理单个或批量删除。
+
+        请求体示例：
         {
             "node_id": "node_element_id"
         }
-        鎴?        {
+        或
+        {
             "node_ids": ["id1", "id2", "id3"]
         }
         """
         try:
             node_id = request.data.get('node_id')
             node_ids = request.data.get('node_ids')
-            
+
             if node_id:
-                # 鍒犻櫎鍗曚釜鑺傜偣
+                # 删除单个节点
                 if not validate_node_exists(node_id):
                     return Response(
                         {'error': 'Node not found'},
-                        status=status.HTTP_404_NOT_FOUND
+                        status=status.HTTP_404_NOT_FOUND,
                     )
-                
+
                 results, summary = write_to_neo4j(DELETE_NODE_CYPHER, {'node_id': node_id})
                 message = 'Node deleted successfully'
-                
             elif node_ids and isinstance(node_ids, list):
-                # 鎵归噺鍒犻櫎鑺傜偣
-                results, summary = write_to_neo4j(BATCH_DELETE_NODES_CYPHER, {'node_ids': node_ids})
+                # 批量删除节点
+                results, summary = write_to_neo4j(
+                    BATCH_DELETE_NODES_CYPHER,
+                    {'node_ids': node_ids},
+                )
                 message = f'{len(node_ids)} nodes deleted successfully'
-                
             else:
                 return Response(
                     {'error': 'node_id or node_ids is required'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            
-            logger.info(f"鐢ㄦ埛 {request.user.id} 鍒犻櫎鑺傜偣鎴愬姛: {summary}")
-            return Response({
-                'message': message,
-                'summary': summary
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            logger.error(f"鍒犻櫎鑺傜偣澶辫触: {e}")
+
+            logger.info(f"用户 {request.user.id} 删除节点成功: {summary}")
             return Response(
-                {'error': 'Failed to delete node', 'details': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {
+                    'message': message,
+                    'summary': summary,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"删除节点失败: {exc}")
+            return Response(
+                {'error': 'Failed to delete node', 'details': str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-
 class RelationshipCRUDView(BaseGraphAPIView):
-    """
-    鍏崇郴鐨勫鍒犳敼鏌ユ搷浣滆鍥?    """
-    
+    """关系的增删改查视图，负责维护节点之间的连线。"""
+
     def post(self, request):
         """
-        鍒涘缓鏂板叧绯?        
-        璇锋眰浣?
+        创建新的关系。
+
+        请求体示例：
         {
             "from_node_id": "source_node_id",
             "to_node_id": "target_node_id",
@@ -330,64 +337,69 @@ class RelationshipCRUDView(BaseGraphAPIView):
             to_node_id = request.data.get('to_node_id')
             relationship_type = request.data.get('relationship_type')
             properties = request.data.get('properties', {})
-            
+
             if not all([from_node_id, to_node_id, relationship_type]):
                 return Response(
                     {'error': 'from_node_id, to_node_id, and relationship_type are required'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            
-            # 楠岃瘉鑺傜偣瀛樺湪
+
+            # 校验起点和终点是否存在
             if not validate_node_exists(from_node_id):
                 return Response(
                     {'error': 'Source node not found'},
-                    status=status.HTTP_404_NOT_FOUND
+                    status=status.HTTP_404_NOT_FOUND,
                 )
-            
+
             if not validate_node_exists(to_node_id):
                 return Response(
                     {'error': 'Target node not found'},
-                    status=status.HTTP_404_NOT_FOUND
+                    status=status.HTTP_404_NOT_FOUND,
                 )
-            
-            # 鏋勫缓鍔ㄦ€丆ypher鏌ヨ
+
+            # 生成创建关系的 Cypher 语句
             cypher_query = f"""
             MATCH (a), (b)
             WHERE elementId(a) = $from_node_id AND elementId(b) = $to_node_id
             CREATE (a)-[r:{relationship_type} $properties]->(b)
             RETURN r
             """
-            
-            results, summary = write_to_neo4j(cypher_query, {
-                'from_node_id': from_node_id,
-                'to_node_id': to_node_id,
-                'properties': properties
-            })
-            
-            logger.info(f"鐢ㄦ埛 {request.user.id} 鍒涘缓鍏崇郴鎴愬姛: {summary}")
-            return Response({
-                'message': 'Relationship created successfully',
-                'data': results,
-                'summary': summary
-            }, status=status.HTTP_201_CREATED)
-            
-        except Exception as e:
-            logger.error(f"鍒涘缓鍏崇郴澶辫触: {e}")
-            return Response(
-                {'error': 'Failed to create relationship', 'details': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+
+            results, summary = write_to_neo4j(
+                cypher_query,
+                {
+                    'from_node_id': from_node_id,
+                    'to_node_id': to_node_id,
+                    'properties': properties,
+                },
             )
-    
+
+            logger.info(f"用户 {request.user.id} 创建关系成功: {summary}")
+            return Response(
+                {
+                    'message': 'Relationship created successfully',
+                    'data': results,
+                    'summary': summary,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"创建关系失败: {exc}")
+            return Response(
+                {'error': 'Failed to create relationship', 'details': str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
     def get(self, request):
         """
-        鑾峰彇鍏崇郴淇℃伅
-        
-        鏌ヨ鍙傛暟:
-        - relationship_id: 鍏崇郴ID
-        - from_node_id: 婧愯妭鐐笽D
-        - to_node_id: 鐩爣鑺傜偣ID
-        - relationship_type: 鍏崇郴绫诲瀷
-        - limit: 缁撴灉闄愬埗鏁伴噺
+        获取关系信息。
+
+        查询参数：
+        - relationship_id: 关系 ID
+        - from_node_id: 起始节点 ID
+        - to_node_id: 目标节点 ID
+        - relationship_type: 关系类型
+        - limit: 返回数量限制
         """
         try:
             relationship_id = request.query_params.get('relationship_id')
@@ -395,45 +407,54 @@ class RelationshipCRUDView(BaseGraphAPIView):
             to_node_id = request.query_params.get('to_node_id')
             relationship_type = request.query_params.get('relationship_type')
             limit = int(request.query_params.get('limit', 50))
-            
+
             if relationship_id:
-                # 鏍规嵁ID鑾峰彇鍏崇郴
-                results = read_from_neo4j(GET_RELATIONSHIP_BY_ID_CYPHER, {'relationship_id': relationship_id})
+                # 按 ID 获取关系
+                results = read_from_neo4j(
+                    GET_RELATIONSHIP_BY_ID_CYPHER,
+                    {'relationship_id': relationship_id},
+                )
             elif from_node_id and to_node_id:
-                # 鏍规嵁鑺傜偣鑾峰彇鍏崇郴
-                results = read_from_neo4j(GET_RELATIONSHIPS_BETWEEN_NODES_CYPHER, {
-                    'from_node_id': from_node_id,
-                    'to_node_id': to_node_id,
-                    'limit': limit
-                })
+                # 按两个节点获取关系
+                results = read_from_neo4j(
+                    GET_RELATIONSHIPS_BETWEEN_NODES_CYPHER,
+                    {
+                        'from_node_id': from_node_id,
+                        'to_node_id': to_node_id,
+                        'limit': limit,
+                    },
+                )
             elif relationship_type:
-                # 鏍规嵁绫诲瀷鑾峰彇鍏崇郴
+                # 按类型获取关系
                 cypher_query = f"MATCH ()-[r:{relationship_type}]-() RETURN r LIMIT $limit"
                 results = read_from_neo4j(cypher_query, {'limit': limit})
             else:
                 return Response(
                     {'error': 'relationship_id, node_ids, or relationship_type is required'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            
-            logger.info(f"鐢ㄦ埛 {request.user.id} 鑾峰彇鍏崇郴淇℃伅鎴愬姛")
-            return Response({
-                'message': 'Relationships retrieved successfully',
-                'data': results,
-                'count': len(results)
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            logger.error(f"鑾峰彇鍏崇郴淇℃伅澶辫触: {e}")
+
+            logger.info(f"用户 {request.user.id} 获取关系信息成功")
             return Response(
-                {'error': 'Failed to retrieve relationships', 'details': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {
+                    'message': 'Relationships retrieved successfully',
+                    'data': results,
+                    'count': len(results),
+                },
+                status=status.HTTP_200_OK,
             )
-    
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"获取关系信息失败: {exc}")
+            return Response(
+                {'error': 'Failed to retrieve relationships', 'details': str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
     def put(self, request):
         """
-        鏇存柊鍏崇郴灞炴€?        
-        璇锋眰浣?
+        更新关系属性。
+
+        请求体示例：
         {
             "relationship_id": "relationship_element_id",
             "properties": {
@@ -445,84 +466,90 @@ class RelationshipCRUDView(BaseGraphAPIView):
         try:
             relationship_id = request.data.get('relationship_id')
             properties = request.data.get('properties', {})
-            
+
             if not relationship_id:
                 return Response(
                     {'error': 'relationship_id is required'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            
+
             if not validate_relationship_exists(relationship_id):
                 return Response(
                     {'error': 'Relationship not found'},
-                    status=status.HTTP_404_NOT_FOUND
+                    status=status.HTTP_404_NOT_FOUND,
                 )
-            
-            results, summary = write_to_neo4j(UPDATE_RELATIONSHIP_CYPHER, {
-                'relationship_id': relationship_id,
-                'properties': properties
-            })
-            
-            logger.info(f"鐢ㄦ埛 {request.user.id} 鏇存柊鍏崇郴鎴愬姛: {summary}")
-            return Response({
-                'message': 'Relationship updated successfully',
-                'data': results,
-                'summary': summary
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            logger.error(f"鏇存柊鍏崇郴澶辫触: {e}")
-            return Response(
-                {'error': 'Failed to update relationship', 'details': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+
+            results, summary = write_to_neo4j(
+                UPDATE_RELATIONSHIP_CYPHER,
+                {
+                    'relationship_id': relationship_id,
+                    'properties': properties,
+                },
             )
-    
+
+            logger.info(f"用户 {request.user.id} 更新关系成功: {summary}")
+            return Response(
+                {
+                    'message': 'Relationship updated successfully',
+                    'data': results,
+                    'summary': summary,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"更新关系失败: {exc}")
+            return Response(
+                {'error': 'Failed to update relationship', 'details': str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
     def delete(self, request):
         """
-        鍒犻櫎鍏崇郴
-        
-        璇锋眰浣?
+        删除关系。
+
+        请求体示例：
         {
             "relationship_id": "relationship_element_id"
         }
         """
         try:
             relationship_id = request.data.get('relationship_id')
-            
+
             if not relationship_id:
                 return Response(
                     {'error': 'relationship_id is required'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            
+
             if not validate_relationship_exists(relationship_id):
                 return Response(
                     {'error': 'Relationship not found'},
-                    status=status.HTTP_404_NOT_FOUND
+                    status=status.HTTP_404_NOT_FOUND,
                 )
-            
-            results, summary = write_to_neo4j(DELETE_RELATIONSHIP_CYPHER, {'relationship_id': relationship_id})
-            
-            logger.info(f"鐢ㄦ埛 {request.user.id} 鍒犻櫎鍏崇郴鎴愬姛: {summary}")
-            return Response({
-                'message': 'Relationship deleted successfully',
-                'summary': summary
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            logger.error(f"鍒犻櫎鍏崇郴澶辫触: {e}")
+
+            results, summary = write_to_neo4j(
+                DELETE_RELATIONSHIP_CYPHER,
+                {'relationship_id': relationship_id},
+            )
+
+            logger.info(f"用户 {request.user.id} 删除关系成功: {summary}")
             return Response(
-                {'error': 'Failed to delete relationship', 'details': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {
+                    'message': 'Relationship deleted successfully',
+                    'summary': summary,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"删除关系失败: {exc}")
+            return Response(
+                {'error': 'Failed to delete relationship', 'details': str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 
-# ==================== 楂樼骇鍥惧垎鏋愯鍥?====================
-
 class GraphAnalysisView(BaseGraphAPIView):
-    """
-    Run higher-level graph analytics such as shortest paths or centrality.
-    """
+    """执行图谱高级分析（最短路径、K 跳邻居、中心性等）。"""
 
     SUPPORTED_ANALYSES = {'shortest_path', 'k_hop_neighbors', 'centrality'}
 
@@ -553,6 +580,7 @@ class GraphAnalysisView(BaseGraphAPIView):
             )
 
     def _handle_shortest_path(self, request, params):
+        """基于最短路径算法，返回两节点之间的最短连线路径。"""
         source = params.get('source_node') or params.get('from_node_id')
         target = params.get('target_node') or params.get('to_node_id')
         max_depth = params.get('max_depth') or params.get('max_length') or 8
@@ -585,6 +613,7 @@ class GraphAnalysisView(BaseGraphAPIView):
         return Response(payload, status=status.HTTP_200_OK)
 
     def _handle_k_hop(self, request, params):
+        """查询指定节点在 K 跳以内的邻居节点集合。"""
         node_id = params.get('node_id') or params.get('source_node')
         hops = params.get('hops') or params.get('k') or 2
         limit = params.get('limit', 100)
@@ -621,6 +650,7 @@ class GraphAnalysisView(BaseGraphAPIView):
         return Response(payload, status=status.HTTP_200_OK)
 
     def _handle_centrality(self, request, params):
+        """计算节点的度中心性，并返回度值最高的节点列表。"""
         limit = params.get('limit', 20)
         try:
             limit = max(1, min(int(limit), 100))
@@ -655,9 +685,7 @@ class GraphAnalysisView(BaseGraphAPIView):
         return Response(payload, status=status.HTTP_200_OK)
 
 class GraphStatisticsView(BaseGraphAPIView):
-    """
-    Return high-level statistics about the knowledge graph.
-    """
+    """返回知识图谱的整体统计信息（节点、关系、连通性等）。"""
 
     def get(self, request):
         stat_type = request.query_params.get('stat_type', 'basic_stats')
@@ -685,9 +713,7 @@ class GraphStatisticsView(BaseGraphAPIView):
         }, status=status.HTTP_200_OK)
 
 class ComplexQueryView(BaseGraphAPIView):
-    """
-    Provide a simplified interface for complex, multi-criteria graph filtering.
-    """
+    """提供复杂条件组合查询的简化接口，支持时间、属性与多跳过滤。"""
 
     def post(self, request):
         query_type = request.data.get('query_type', 'composite')
@@ -709,6 +735,7 @@ class ComplexQueryView(BaseGraphAPIView):
         return Response({'error': f"Unsupported query_type '{query_type}'"}, status=status.HTTP_400_BAD_REQUEST)
 
     def _handle_composite(self, params, limit):
+        """根据标签、关系类型与关键词组合过滤图谱。"""
         node_labels = params.get('node_labels') or params.get('node_types')
         relationship_types = params.get('relationship_types')
         search = params.get('search') or params.get('keyword')
@@ -737,6 +764,7 @@ class ComplexQueryView(BaseGraphAPIView):
         }, status=status.HTTP_200_OK)
 
     def _handle_time_range(self, params, limit):
+        """按照时间区间过滤事件或关系，用于回放特定时期的数据。"""
         start_time = params.get('start_time') or params.get('start')
         end_time = params.get('end_time') or params.get('end')
         if not start_time or not end_time:
@@ -761,6 +789,7 @@ class ComplexQueryView(BaseGraphAPIView):
         }, status=status.HTTP_200_OK)
 
     def _handle_multi_hop(self, params, limit):
+        """以某个节点为起点执行多跳扩散，获取更大的关联子图。"""
         node_id = params.get('node_id') or params.get('source_node')
         hops = params.get('hops') or params.get('max_hops') or 2
         try:
@@ -790,14 +819,10 @@ class ComplexQueryView(BaseGraphAPIView):
         }, status=status.HTTP_200_OK)
 
 class InitialGraphView(BaseGraphAPIView):
-    """
-    API 绔偣锛氳幏鍙栧垵濮嬪浘璋辨暟鎹敤浜庡彲瑙嗗寲銆?    """
+    """获取初始图谱快照，用于前端首次渲染可视化。"""
 
     def get(self, request, format=None):
-        """
-        Handle the initial graph snapshot request.
-        Allows optional limit parameter to cap the dataset size.
-        """
+        """处理初始图谱快照请求，可通过 limit 参数控制返回规模。"""
         try:
             raw_limit = request.query_params.get('limit', 50)
             try:
@@ -832,10 +857,7 @@ class InitialGraphView(BaseGraphAPIView):
 
 
 class FilteredGraphView(BaseGraphAPIView):
-    """
-    Return a filtered graph subset based on user supplied criteria.
-    Supports both GET query parameters and POST JSON payloads.
-    """
+    """根据筛选条件返回子图，支持 GET 参数与 POST JSON 双模式。"""
 
     SUPPORTED_QUERY_KEYS = {
         'node_types',
@@ -912,9 +934,7 @@ class FilteredGraphView(BaseGraphAPIView):
         return [str(value).strip()]
 
 class GraphMetadataView(BaseGraphAPIView):
-    """
-    Provide graph structure insights such as high-degree nodes and relationship usage.
-    """
+    """提供图谱结构洞察，如高连接度节点、标签与关系使用频次。"""
 
     def get(self, request, format=None):
         node_limit = self._clamp(request.query_params.get('node_limit', 10), default=10, min_value=1, max_value=100)
@@ -1005,9 +1025,7 @@ class GraphMetadataView(BaseGraphAPIView):
         return max(min_value, min(max_value, numeric))
 
 class NodeDetailView(BaseGraphAPIView):
-    """
-    Retrieve a specific node along with its immediate neighbours for tooltip/detail panels.
-    """
+    """获取单个节点及其邻居详情，供前端弹窗或信息面板使用。"""
 
     def get(self, request, node_id, format=None):
         if not node_id:
@@ -1049,9 +1067,7 @@ class NodeDetailView(BaseGraphAPIView):
             )
 
 class GraphUniversalSearchView(BaseGraphAPIView):
-    """
-    Perform a fuzzy search across nodes and relationships, returning structured matches.
-    """
+    """提供全局模糊搜索，返回结构化的节点与关系匹配结果。"""
 
     def get(self, request, format=None):
         query = (request.query_params.get('query') or '').strip()
@@ -1131,9 +1147,7 @@ class GraphUniversalSearchView(BaseGraphAPIView):
         return max(min_value, min(max_value, numeric))
 
 class GraphSearchView(BaseGraphAPIView):
-    """
-    Lightweight search endpoint that surfaces nodes matching a fuzzy query.
-    """
+    """轻量级模糊搜索接口，聚焦返回匹配的节点列表。"""
 
     SCOPE_LABEL_MAP = {
         'cases': ['Case', 'FraudCase'],
@@ -1198,9 +1212,7 @@ class GraphSearchView(BaseGraphAPIView):
         return list(dict.fromkeys(labels)) or None
 
 class NodeExpandView(BaseGraphAPIView):
-    """
-    Expand a node to retrieve its immediate neighbourhood for on-demand exploration.
-    """
+    """按需扩展节点，返回一度邻居以便做可视化探索。"""
 
     def get(self, request, node_id, format=None):
         if not node_id:
