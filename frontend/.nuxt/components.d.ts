@@ -14,8 +14,10 @@ type HydrationStrategies = {
 type LazyComponent<T> = DefineComponent<HydrationStrategies, {}, {}, {}, {}, {}, {}, { hydrated: () => void }> & T
 
 
+export const CommentThread: typeof import("../components/community/CommentThread.vue")['default']
 export const AppShell: typeof import("../components/layout/AppShell.vue")['default']
 export const ThemeToggle: typeof import("../components/layout/ThemeToggle.vue")['default']
+export const CapabilityRadar: typeof import("../components/simulation/CapabilityRadar.client.vue")['default']
 export const Badge: typeof import("../components/ui/badge.vue")['default']
 export const Button: typeof import("../components/ui/button.vue")['default']
 export const CardContent: typeof import("../components/ui/card-content.vue")['default']
@@ -29,6 +31,11 @@ export const Label: typeof import("../components/ui/label.vue")['default']
 export const PageHeader: typeof import("../components/ui/page-header.vue")['default']
 export const Separator: typeof import("../components/ui/separator.vue")['default']
 export const Switch: typeof import("../components/ui/switch.vue")['default']
+export const Tabs: typeof import("../components/ui/tabs/Tabs.vue")['default']
+export const TabsContent: typeof import("../components/ui/tabs/TabsContent.vue")['default']
+export const TabsList: typeof import("../components/ui/tabs/TabsList.vue")['default']
+export const TabsRoot: typeof import("../components/ui/tabs/TabsRoot.vue")['default']
+export const TabsTrigger: typeof import("../components/ui/tabs/TabsTrigger.vue")['default']
 export const Textarea: typeof import("../components/ui/textarea.vue")['default']
 export const NuxtWelcome: typeof import("../node_modules/nuxt/dist/app/components/welcome.vue")['default']
 export const NuxtLayout: typeof import("../node_modules/nuxt/dist/app/components/nuxt-layout")['default']
@@ -55,8 +62,10 @@ export const Head: typeof import("../node_modules/nuxt/dist/head/runtime/compone
 export const Html: typeof import("../node_modules/nuxt/dist/head/runtime/components")['Html']
 export const Body: typeof import("../node_modules/nuxt/dist/head/runtime/components")['Body']
 export const NuxtIsland: typeof import("../node_modules/nuxt/dist/app/components/nuxt-island")['default']
+export const LazyCommentThread: LazyComponent<typeof import("../components/community/CommentThread.vue")['default']>
 export const LazyAppShell: LazyComponent<typeof import("../components/layout/AppShell.vue")['default']>
 export const LazyThemeToggle: LazyComponent<typeof import("../components/layout/ThemeToggle.vue")['default']>
+export const LazyCapabilityRadar: LazyComponent<typeof import("../components/simulation/CapabilityRadar.client.vue")['default']>
 export const LazyBadge: LazyComponent<typeof import("../components/ui/badge.vue")['default']>
 export const LazyButton: LazyComponent<typeof import("../components/ui/button.vue")['default']>
 export const LazyCardContent: LazyComponent<typeof import("../components/ui/card-content.vue")['default']>
@@ -70,6 +79,11 @@ export const LazyLabel: LazyComponent<typeof import("../components/ui/label.vue"
 export const LazyPageHeader: LazyComponent<typeof import("../components/ui/page-header.vue")['default']>
 export const LazySeparator: LazyComponent<typeof import("../components/ui/separator.vue")['default']>
 export const LazySwitch: LazyComponent<typeof import("../components/ui/switch.vue")['default']>
+export const LazyTabs: LazyComponent<typeof import("../components/ui/tabs/Tabs.vue")['default']>
+export const LazyTabsContent: LazyComponent<typeof import("../components/ui/tabs/TabsContent.vue")['default']>
+export const LazyTabsList: LazyComponent<typeof import("../components/ui/tabs/TabsList.vue")['default']>
+export const LazyTabsRoot: LazyComponent<typeof import("../components/ui/tabs/TabsRoot.vue")['default']>
+export const LazyTabsTrigger: LazyComponent<typeof import("../components/ui/tabs/TabsTrigger.vue")['default']>
 export const LazyTextarea: LazyComponent<typeof import("../components/ui/textarea.vue")['default']>
 export const LazyNuxtWelcome: LazyComponent<typeof import("../node_modules/nuxt/dist/app/components/welcome.vue")['default']>
 export const LazyNuxtLayout: LazyComponent<typeof import("../node_modules/nuxt/dist/app/components/nuxt-layout")['default']>

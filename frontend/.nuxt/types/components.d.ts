@@ -14,8 +14,10 @@ type HydrationStrategies = {
 type LazyComponent<T> = DefineComponent<HydrationStrategies, {}, {}, {}, {}, {}, {}, { hydrated: () => void }> & T
 
 interface _GlobalComponents {
+  'CommentThread': typeof import("../../components/community/CommentThread.vue")['default']
   'AppShell': typeof import("../../components/layout/AppShell.vue")['default']
   'ThemeToggle': typeof import("../../components/layout/ThemeToggle.vue")['default']
+  'CapabilityRadar': typeof import("../../components/simulation/CapabilityRadar.client.vue")['default']
   'Badge': typeof import("../../components/ui/badge.vue")['default']
   'Button': typeof import("../../components/ui/button.vue")['default']
   'CardContent': typeof import("../../components/ui/card-content.vue")['default']
@@ -29,6 +31,11 @@ interface _GlobalComponents {
   'PageHeader': typeof import("../../components/ui/page-header.vue")['default']
   'Separator': typeof import("../../components/ui/separator.vue")['default']
   'Switch': typeof import("../../components/ui/switch.vue")['default']
+  'Tabs': typeof import("../../components/ui/tabs/Tabs.vue")['default']
+  'TabsContent': typeof import("../../components/ui/tabs/TabsContent.vue")['default']
+  'TabsList': typeof import("../../components/ui/tabs/TabsList.vue")['default']
+  'TabsRoot': typeof import("../../components/ui/tabs/TabsRoot.vue")['default']
+  'TabsTrigger': typeof import("../../components/ui/tabs/TabsTrigger.vue")['default']
   'Textarea': typeof import("../../components/ui/textarea.vue")['default']
   'NuxtWelcome': typeof import("../../node_modules/nuxt/dist/app/components/welcome.vue")['default']
   'NuxtLayout': typeof import("../../node_modules/nuxt/dist/app/components/nuxt-layout")['default']
@@ -55,8 +62,10 @@ interface _GlobalComponents {
   'Html': typeof import("../../node_modules/nuxt/dist/head/runtime/components")['Html']
   'Body': typeof import("../../node_modules/nuxt/dist/head/runtime/components")['Body']
   'NuxtIsland': typeof import("../../node_modules/nuxt/dist/app/components/nuxt-island")['default']
+  'LazyCommentThread': LazyComponent<typeof import("../../components/community/CommentThread.vue")['default']>
   'LazyAppShell': LazyComponent<typeof import("../../components/layout/AppShell.vue")['default']>
   'LazyThemeToggle': LazyComponent<typeof import("../../components/layout/ThemeToggle.vue")['default']>
+  'LazyCapabilityRadar': LazyComponent<typeof import("../../components/simulation/CapabilityRadar.client.vue")['default']>
   'LazyBadge': LazyComponent<typeof import("../../components/ui/badge.vue")['default']>
   'LazyButton': LazyComponent<typeof import("../../components/ui/button.vue")['default']>
   'LazyCardContent': LazyComponent<typeof import("../../components/ui/card-content.vue")['default']>
@@ -70,6 +79,11 @@ interface _GlobalComponents {
   'LazyPageHeader': LazyComponent<typeof import("../../components/ui/page-header.vue")['default']>
   'LazySeparator': LazyComponent<typeof import("../../components/ui/separator.vue")['default']>
   'LazySwitch': LazyComponent<typeof import("../../components/ui/switch.vue")['default']>
+  'LazyTabs': LazyComponent<typeof import("../../components/ui/tabs/Tabs.vue")['default']>
+  'LazyTabsContent': LazyComponent<typeof import("../../components/ui/tabs/TabsContent.vue")['default']>
+  'LazyTabsList': LazyComponent<typeof import("../../components/ui/tabs/TabsList.vue")['default']>
+  'LazyTabsRoot': LazyComponent<typeof import("../../components/ui/tabs/TabsRoot.vue")['default']>
+  'LazyTabsTrigger': LazyComponent<typeof import("../../components/ui/tabs/TabsTrigger.vue")['default']>
   'LazyTextarea': LazyComponent<typeof import("../../components/ui/textarea.vue")['default']>
   'LazyNuxtWelcome': LazyComponent<typeof import("../../node_modules/nuxt/dist/app/components/welcome.vue")['default']>
   'LazyNuxtLayout': LazyComponent<typeof import("../../node_modules/nuxt/dist/app/components/nuxt-layout")['default']>

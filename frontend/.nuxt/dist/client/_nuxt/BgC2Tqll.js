@@ -1,0 +1,1 @@
+import{c as o}from"./CCRcQfJ_.js";import{g as l,c as n,R as r,H as t,v as c,o as p}from"./C4cmwJeW.js";const f=l({__name:"label",props:{class:{}},setup(e){const s=e;return(a,m)=>(p(),n("label",{class:t(c(o)("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",s.class))},[r(a.$slots,"default")],2))}});export{f as _};

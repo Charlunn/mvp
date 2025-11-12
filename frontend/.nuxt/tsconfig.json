@@ -119,7 +119,7 @@
         "../node_modules/nuxt/dist/app/compat/vue-demi"
       ],
       "#icon-collections": [
-        "./icon-collections"
+        "./icon-collections.mjs"
       ],
       "#vue-router": [
         "../node_modules/vue-router"
@@ -133,11 +133,8 @@
       "#tailwind-config": [
         "./tailwind/expose"
       ],
-      "#tailwind-config/*": [
-        "./tailwind/expose/*"
-      ],
       "#app-manifest": [
-        "./manifest/meta/dev"
+        "./manifest/meta/432bf1c2-f4d0-48bf-9c0d-60471a6645d2.json"
       ],
       "#components": [
         "./components"
@@ -191,9 +188,9 @@
   "exclude": [
     "../dist",
     "../.data",
-    "../../../node_modules",
+    "../../node_modules",
     "../node_modules/runtime/server",
     "../node_modules/dist/runtime/server",
-    "dev"
+    "../.output"
   ]
 }
