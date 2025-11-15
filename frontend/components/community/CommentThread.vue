@@ -3,7 +3,7 @@
     <button v-if="comment.replies?.length" class="absolute left-0 top-0 h-full w-4 flex items-center justify-center text-muted-foreground hover:text-foreground" @click="toggleCollapse">
       <Icon :name="isCollapsed ? 'lucide:plus' : 'lucide:minus'" class="h-4 w-4" />
     </button>
-    <div :style="{ 'margin-left': `${comment.replies?.length ? 1.5 : 0}rem` }">
+    <div :style="{ 'margin-left': `${comment.replies?.length ? 1.5 : 0}rem` }" class="relative z-10">
       <div class="flex items-start justify-between">
         <div>
           <NuxtLink :to="`/users/${comment.author.username}`" class="font-medium hover:underline">
@@ -43,7 +43,7 @@
       </div>
     </div>
     <div v-if="comment.replies?.length" class="mt-4 space-y-3 relative">
-      <div v-if="props.depth > 0" class="absolute left-0 top-0 h-full w-0.5 bg-border" :style="{ 'margin-left': `${(props.depth - 1) * 1.5}rem` }"></div>
+      <div v-if="props.depth > 0" class="absolute left-0 top-0 h-full w-0.5 bg-border pointer-events-none" :style="{ 'margin-left': `${(props.depth - 1) * 1.5}rem` }"></div>
       <div :style="{ 'padding-left': `${props.depth * 1.5}rem` }">
         <button v-if="comment.replies.length > 3" class="text-xs text-muted-foreground hover:text-foreground" @click="toggleCollapse">
           {{ isCollapsed ? `展开 ${comment.replies.length} 条回复` : '收起回复' }}

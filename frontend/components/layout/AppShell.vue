@@ -83,43 +83,46 @@
         </div>
       </header>
       <Transition name="fade">
-        <div v-if="drawerOpen" class="md:hidden border-b border-border bg-background px-4 py-4 space-y-4">
-          <nav class="space-y-1">
-            <NuxtLink
-              v-for="item in navItems"
-              :key="item.to"
-              :to="item.to"
-              class="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium"
-              :class="isActive(item.to) ? 'bg-secondary text-foreground' : 'text-muted-foreground'"
-              @click="drawerOpen = false"
-            >
-              <span>{{ item.label }}</span>
-              <span
-                v-if="item.label === '消息中心' && unreadCount > 0"
-                class="bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center"
+        <div v-if="drawerOpen" class="md:hidden">
+          <div class="fixed inset-0 z-40 bg-black/20" @click="drawerOpen = false"></div>
+          <div class="fixed inset-x-0 top-0 z-50 border-b border-border bg-background px-4 py-4 space-y-4 max-h-screen overflow-y-auto">
+            <nav class="space-y-1">
+              <NuxtLink
+                v-for="item in navItems"
+                :key="item.to"
+                :to="item.to"
+                class="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium"
+                :class="isActive(item.to) ? 'bg-secondary text-foreground' : 'text-muted-foreground'"
+                @click="drawerOpen = false"
               >
-                {{ unreadCount }}
-              </span>
-            </NuxtLink>
-          </nav>
-          <div class="rounded-lg border border-border/80 p-3 text-sm">
-            <p class="text-xs text-muted-foreground">当前状态</p>
-            <div class="mt-1 flex items-center justify-between">
-              <span class="font-medium">{{ userDisplayName }}</span>
-              <span class="text-xs text-muted-foreground">
-                {{ auth.isAuthenticated ? '在线' : '未登录' }}
-              </span>
+                <span>{{ item.label }}</span>
+                <span
+                  v-if="item.label === '消息中心' && unreadCount > 0"
+                  class="bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center"
+                >
+                  {{ unreadCount }}
+                </span>
+              </NuxtLink>
+            </nav>
+            <div class="rounded-lg border border-border/80 p-3 text-sm">
+              <p class="text-xs text-muted-foreground">当前状态</p>
+              <div class="mt-1 flex items-center justify-between">
+                <span class="font-medium">{{ userDisplayName }}</span>
+                <span class="text-xs text-muted-foreground">
+                  {{ auth.isAuthenticated ? '在线' : '未登录' }}
+                </span>
+              </div>
+              <Button
+                class="mt-3 w-full justify-center gap-2"
+                size="sm"
+                variant="outline"
+                :disabled="logoutLoading"
+                @click="handleMobileAuthAction"
+              >
+                <Icon :name="auth.isAuthenticated ? 'lucide:log-out' : 'lucide:log-in'" class="h-4 w-4" />
+                {{ auth.isAuthenticated ? (logoutLoading ? '正在退出' : '退出登录') : '前往登录' }}
+              </Button>
             </div>
-            <Button
-              class="mt-3 w-full justify-center gap-2"
-              size="sm"
-              variant="outline"
-              :disabled="logoutLoading"
-              @click="handleMobileAuthAction"
-            >
-              <Icon :name="auth.isAuthenticated ? 'lucide:log-out' : 'lucide:log-in'" class="h-4 w-4" />
-              {{ auth.isAuthenticated ? (logoutLoading ? '正在退出' : '退出登录') : '前往登录' }}
-            </Button>
           </div>
         </div>
       </Transition>

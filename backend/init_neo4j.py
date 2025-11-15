@@ -11,6 +11,7 @@ import argparse
 import sys
 from pathlib import Path
 from typing import Dict
+import os
 
 ROOT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = ROOT_DIR.parent
@@ -65,10 +66,31 @@ def main() -> None:
     args = parse_args()
 
     env_values = load_env_file(Path(args.env_file))
-    uri = args.uri or env_values.get("NEO4J_URI") or "bolt://localhost:7687"
-    user = args.user or env_values.get("NEO4J_USERNAME") or "neo4j"
-    password = args.password or env_values.get("NEO4J_PASSWORD") or "neo4j"
-    database = args.database or env_values.get("NEO4J_DATABASE") or "neo4j"
+    # 优先使用容器环境变量，其次 .env 文件，最后安全的容器内默认值
+    uri = (
+        args.uri
+        or os.environ.get("NEO4J_URI")
+        or env_values.get("NEO4J_URI")
+        or "bolt://neo4j:7687"
+    )
+    user = (
+        args.user
+        or os.environ.get("NEO4J_USERNAME")
+        or env_values.get("NEO4J_USERNAME")
+        or "neo4j"
+    )
+    password = (
+        args.password
+        or os.environ.get("NEO4J_PASSWORD")
+        or env_values.get("NEO4J_PASSWORD")
+        or "neo4j"
+    )
+    database = (
+        args.database
+        or os.environ.get("NEO4J_DATABASE")
+        or env_values.get("NEO4J_DATABASE")
+        or "neo4j"
+    )
 
     seed_path = Path(args.seed)
     dataset = args.dataset

@@ -38,7 +38,6 @@
             v-model="form.username"
             required
             autocomplete="username"
-            placeholder="admin"
           />
         </div>
         <div>
