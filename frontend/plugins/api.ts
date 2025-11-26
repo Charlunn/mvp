@@ -26,6 +26,21 @@ export default defineNuxtPlugin(() => {
         useCookie('mvp-access-token').value = null
         useCookie('mvp-refresh-token').value = null
       }
+      
+      // 处理HTML错误响应（如nginx错误页面）
+      if (error.response?.data && typeof error.response.data === 'string') {
+        const htmlPattern = /<\s*html[^>]*>/i
+        if (htmlPattern.test(error.response.data)) {
+          // 将HTML响应转换为友好的错误消息
+          const statusText = error.response.statusText || '服务器错误'
+          const status = error.response.status
+          error.response.data = {
+            detail: `请求失败 (${status}): ${statusText}`,
+            message: '服务暂时不可用，请稍后重试'
+          } as any
+        }
+      }
+      
       return Promise.reject(error)
     }
   )

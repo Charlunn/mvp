@@ -251,9 +251,9 @@ const submitComment = async () => {
     newComment.value = ''
     await fetchPost()
   } catch (error) {
-    console.error('发布评论失败', error)
-    const axiosError = error as AxiosError<{ detail?: string }>
-    window.alert(axiosError.response?.data?.detail || '发布失败，请稍后重试')
+    console.error('回复评论失败', error)
+    const { extractErrorMessage } = await import('~/composables/useErrorHandler')
+    window.alert(extractErrorMessage(error, '回复失败，请稍后重试'))
   } finally {
     commentLoading.value = false
   }
@@ -340,8 +340,8 @@ const submitEdit = async () => {
     window.alert('帖子已更新')
   } catch (error) {
     console.error('更新帖子失败', error)
-    const axiosError = error as AxiosError<{ detail?: string }>
-    window.alert(axiosError.response?.data?.detail || '更新失败，请稍后重试')
+    const { extractErrorMessage } = await import('~/composables/useErrorHandler')
+    window.alert(extractErrorMessage(error, '更新失败，请稍后重试'))
   } finally {
     editLoading.value = false
   }
@@ -377,9 +377,9 @@ const handleCommentDelete = async (commentId: number) => {
     await $api.delete(`/community/comments/${commentId}/`)
     await fetchPost()
   } catch (error) {
-    console.error('删除评论失败', error)
-    const axiosError = error as AxiosError<{ detail?: string }>
-    window.alert(axiosError.response?.data?.detail || '删除失败，请稍后重试')
+    console.error('删除帖子失败', error)
+    const { extractErrorMessage } = await import('~/composables/useErrorHandler')
+    window.alert(extractErrorMessage(error, '删除失败，请稍后重试'))
   }
 }
 

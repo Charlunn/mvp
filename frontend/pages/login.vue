@@ -1,4 +1,5 @@
 ﻿<template>
+  <ClientOnly>
   <Card class="w-full max-w-md border border-border/60 bg-card shadow-none">
     <CardHeader class="space-y-3">
       <CardTitle>
@@ -131,11 +132,23 @@
       <p>注册创建的账户默认为普通用户，如需管理员权限请联系平台维护人员。</p>
     </CardFooter>
   </Card>
+  <template #fallback>
+    <div class="w-full max-w-md border border-border/60 bg-card shadow-none rounded-lg p-6">
+      <div class="animate-pulse space-y-4">
+        <div class="h-8 bg-muted rounded"></div>
+        <div class="h-4 bg-muted rounded w-3/4"></div>
+        <div class="h-10 bg-muted rounded"></div>
+        <div class="h-10 bg-muted rounded"></div>
+      </div>
+    </div>
+  </template>
+  </ClientOnly>
 </template>
 
 <script setup lang="ts">
 import type { AxiosError } from 'axios'
 import { useDebounceFn } from '@vueuse/core'
+import { extractErrors, extractErrorMessage } from '~/composables/useErrorHandler'
 
 type AuthMode = 'login' | 'register'
 
@@ -164,39 +177,6 @@ const registerForm = reactive({
   password: '',
   password2: '',
 })
-
-const extractErrors = (error: unknown): string[] => {
-  const axiosError = error as AxiosError<any>
-  const data = axiosError?.response?.data
-  if (!data) {
-    return [axiosError?.message || '请求失败']
-  }
-  if (typeof data === 'string') {
-    return [data]
-  }
-  if (Array.isArray(data)) {
-    return data.map(String)
-  }
-  if (typeof data === 'object') {
-    if (Array.isArray((data as any).password)) {
-      return (data as any).password.map(String)
-    }
-    const flattened = Object.values(data).flatMap((value) => {
-      if (Array.isArray(value)) return value.map(String)
-      if (typeof value === 'string') return [value]
-      return []
-    })
-    if (flattened.length) {
-      return flattened
-    }
-  }
-  return ['请求失败']
-}
-
-const extractErrorMessage = (error: unknown, fallback: string) => {
-  const list = extractErrors(error)
-  return list[0] || fallback
-}
 
 const handleLogin = async () => {
   const payload = {

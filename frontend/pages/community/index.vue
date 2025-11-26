@@ -325,8 +325,8 @@ const createCommunity = async () => {
     await fetchCommunities()
   } catch (error) {
     console.error('创建社区失败', error)
-    const axiosError = error as AxiosError<{ detail?: string }>
-    window.alert(axiosError.response?.data?.detail || '创建社区失败，请稍后重试')
+    const { extractErrorMessage } = await import('~/composables/useErrorHandler')
+    window.alert(extractErrorMessage(error, '创建社区失败，请稍后重试'))
   } finally {
     createCommunityLoading.value = false
   }
@@ -450,9 +450,9 @@ const submitPost = async () => {
     postForm.community = selectedCommunity.value || ''
     await refreshPosts()
   } catch (error) {
-    console.error('发布帖子失败', error)
-    const axiosError = error as AxiosError<{ detail?: string }>
-    window.alert(axiosError.response?.data?.detail || '发布失败，请稍后重试')
+    console.error('发帖失败', error)
+    const { extractErrorMessage } = await import('~/composables/useErrorHandler')
+    window.alert(extractErrorMessage(error, '发布失败，请稍后重试'))
   } finally {
     createLoading.value = false
   }

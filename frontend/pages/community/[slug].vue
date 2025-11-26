@@ -310,8 +310,8 @@ const submitPost = async () => {
     window.alert('帖子已发布')
   } catch (error) {
     console.error('发布帖子失败', error)
-    const axiosError = error as AxiosError<{ detail?: string }>
-    window.alert(axiosError.response?.data?.detail || '发布失败，请稍后重试')
+    const { extractErrorMessage } = await import('~/composables/useErrorHandler')
+    window.alert(extractErrorMessage(error, '发布失败，请稍后重试'))
   } finally {
     createLoading.value = false
   }

@@ -286,7 +286,8 @@ const saveProfile = async () => {
     window.alert('资料已更新')
   } catch (error) {
     console.error('保存资料失败', error)
-    window.alert('保存失败，请稍后再试')
+    const { extractErrorMessage } = await import('~/composables/useErrorHandler')
+    window.alert(extractErrorMessage(error, '保存失败，请稍后再试'))
   } finally {
     profileLoading.value = false
   }

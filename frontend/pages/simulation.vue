@@ -159,6 +159,7 @@
 import type { AxiosError } from 'axios'
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import CapabilityRadar from '~/components/simulation/CapabilityRadar.client.vue'
+import { extractErrorMessage } from '~/composables/useErrorHandler'
 
 definePageMeta({
   requiresAuth: true,
@@ -230,15 +231,6 @@ const scrollToBottom = () => {
 
 const showToast = (text: string) => {
   if (process.client) window.alert(text)
-}
-
-const extractErrorMessage = (error: unknown, fallback: string) => {
-  const axiosError = error as AxiosError<any>
-  const data = axiosError?.response?.data
-  if (typeof data === 'string' && data.trim()) return data
-  if (data?.message) return Array.isArray(data.message) ? data.message[0] : data.message
-  if (data?.detail) return Array.isArray(data.detail) ? data.detail[0] : data.detail
-  return fallback
 }
 
 const mapResultFromApi = (payload: any): SimulationResult => ({

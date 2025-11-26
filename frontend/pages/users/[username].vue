@@ -183,9 +183,10 @@ const fetchProfile = async () => {
     const { data } = await $api.get(`/community/users/${route.params.username}/`)
     profile.value = data
   } catch (error) {
+    const { extractErrorMessage } = await import('~/composables/useErrorHandler')
     const axiosError = error as AxiosError<{ detail?: string }>
     profile.value = null
-    profileError.value = axiosError.response?.data?.detail || '无法获取该用户信息'
+    profileError.value = extractErrorMessage(error, '无法获取该用户信息')
   }
 }
 
@@ -196,9 +197,10 @@ const fetchPosts = async () => {
     const { data } = await $api.get(`/community/users/${route.params.username}/posts/`)
     posts.value = Array.isArray(data) ? data : data.results || []
   } catch (error) {
+    const { extractErrorMessage } = await import('~/composables/useErrorHandler')
     const axiosError = error as AxiosError<{ detail?: string }>
     posts.value = []
-    postsError.value = axiosError.response?.data?.detail || '无法获取帖子列表'
+    postsError.value = extractErrorMessage(error, '无法获取帖子列表')
   } finally {
     postsLoading.value = false
   }

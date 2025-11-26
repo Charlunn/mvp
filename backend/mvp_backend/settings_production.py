@@ -10,7 +10,12 @@ DEBUG = False
 # 生产环境允许的主机
 ALLOWED_HOSTS = [
     '47.109.18.154',  # 生产服务器IP
-    # 添加实际域名
+    'antifraud2.tech',
+    'www.antifraud2.tech',
+    'localhost',
+    '127.0.0.1',
+    'backend',
+    'nginx',
 ]
 
 # 安全的SECRET_KEY（生产环境必须使用环境变量）
@@ -20,9 +25,16 @@ if not SECRET_KEY:
 
 # CORS设置 - 生产环境应该限制允许的源
 CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # 前端开发服务器
-    # 添加实际前端域名
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3100",
+    "http://127.0.0.1:3100",
+    "http://antifraud2.tech",
+    "http://www.antifraud2.tech",
+    "https://antifraud2.tech",
+    "https://www.antifraud2.tech",
 ]
 
 # CORS允许的头部
@@ -105,7 +117,12 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_TRUSTED_ORIGINS = [
-    # 添加实际域名
+    "http://antifraud2.tech",
+    "http://www.antifraud2.tech",
+    "https://antifraud2.tech",
+    "https://www.antifraud2.tech",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
 # JWT 生产环境设置
