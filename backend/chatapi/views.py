@@ -1101,7 +1101,7 @@ class ScenarioChatStatelessAPIView(APIView):
                 
                 # Extract opening line from system prompt
                 import re
-                match = re.search(r'你的第一句话应该是："(.*?)"', system_prompt)
+                match = re.search(r'开场白："(.*?)"', system_prompt)
                 opening_line = match.group(1) if match else "你好。"
                 
                 return Response({
