@@ -1337,6 +1337,7 @@ class ScenarioChatStatelessAPIView(APIView):
         try:
             user_message = request.data.get('message')
             reset_conversation = request.data.get('reset')
+            init_conversation = request.data.get('init')
             force_end = bool(request.data.get('force_end'))
             scenario_type = request.data.get('scenario_type', 'pig-butchering')
             difficulty = request.data.get('difficulty', 'medium')
@@ -1346,6 +1347,25 @@ class ScenarioChatStatelessAPIView(APIView):
 
             if reset_conversation:
                 return Response({'success': True, 'message': 'stateless session reset'}, status=status.HTTP_200_OK)
+
+            if init_conversation:
+                # Initialize conversation with system prompt and return the opening line
+                system_prompt = ScenarioChatAPIView.get_scenario_system_prompt(scenario_type, difficulty, mode)
+                
+                # Extract opening line from system prompt
+                import re
+                match = re.search(r'你的第一句话应该是："(.*?)"', system_prompt)
+                opening_line = match.group(1) if match else "你好。"
+                
+                return Response({
+                    'success': True,
+                    'response': opening_line,
+                    'session_closed': False,
+                    'message_count': 1,
+                    'current_score': 50,
+                    'score_change': 0,
+                    'change_reason': '初始对话',
+                }, status=status.HTTP_200_OK)
 
             if not force_end and (not user_message or not isinstance(user_message, str)):
                 return Response({'success': False, 'message': '请求中缺少有效的消息内容'}, status=status.HTTP_400_BAD_REQUEST)

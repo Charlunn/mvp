@@ -50,73 +50,12 @@
           </div>
         </div>
 
-        <div class="rounded-2xl border border-border/70 bg-card p-4">
-          <div class="flex items-center justify-between text-sm">
-            <p class="font-medium">对话得分进度</p>
-            <div v-if="sessionClosed && finalResult" class="text-right">
-              <p class="text-2xl font-semibold">
-                {{ finalResult.finalScore }}<span class="text-base font-normal"> / 100</span>
-              </p>
-              <p class="text-xs text-muted-foreground">{{ finalResult.endReasonLabel }}</p>
-            </div>
-            <p v-else class="text-xs text-muted-foreground">完成演练后将显示本次综合得分</p>
-          </div>
-          <div class="mt-2 h-2 rounded-full bg-muted">
-            <div
-              class="h-2 rounded-full bg-foreground transition-all"
-              :style="{ width: sessionClosed && finalResult ? finalResult.finalScore + '%' : '0%' }"
-            ></div>
-          </div>
+        <div class="flex justify-end pt-4">
+          <Button size="lg" @click="startSimulation" class="w-full md:w-auto">
+            <Icon name="lucide:play-circle" class="h-5 w-5 mr-2" />
+            开始模拟演练
+          </Button>
         </div>
-
-        <div
-          ref="chatBodyRef"
-          class="max-h-[420px] space-y-3 overflow-y-auto rounded-2xl border border-border/70 bg-background/80 p-4 shadow-inner"
-        >
-          <div
-            v-for="(item, index) in conversation"
-            :key="index"
-            class="max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-relaxed"
-            :class="item.role === 'user' ? 'ml-auto bg-foreground text-background' : 'bg-secondary text-foreground'"
-          >
-            {{ item.content }}
-          </div>
-          <p v-if="!conversation.length" class="text-sm text-muted-foreground">
-            还没有任何消息，先向 AI 发起第一句对话吧。
-          </p>
-        </div>
-
-        <form class="flex flex-col gap-3 md:flex-row" @submit.prevent="sendMessage">
-          <Textarea
-            v-model="message"
-            rows="3"
-            class="flex-1"
-            :disabled="sessionClosed"
-            placeholder="描述你的想法、疑问或进一步追问，以锻炼甄别与拒绝能力。"
-          />
-          <div class="flex flex-col gap-2">
-            <Button type="submit" class="gap-2" :disabled="chatLoading || !message.trim() || sessionClosed">
-              <Icon name="lucide:message-circle" class="h-4 w-4" />
-              {{ chatLoading && !endingEarly ? '发送中...' : '发送' }}
-            </Button>
-            <Button type="button" variant="outline" :disabled="chatLoading" @click="resetSession">
-              重置会话
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              :disabled="sessionClosed || !conversation.length || chatLoading"
-              @click="endSessionEarly"
-            >
-              <Icon name="lucide:flag" class="h-4 w-4" />
-              {{ endingEarly ? '结算中...' : '提前结束' }}
-            </Button>
-          </div>
-        </form>
-
-        <p v-if="sessionClosed" class="text-sm text-amber-600">
-          本次演练已结束：{{ finalResult?.endReasonLabel ?? '系统终止' }}，可以重置后开启新的对话。
-        </p>
       </CardContent>
     </Card>
 
@@ -184,13 +123,7 @@ type SimulationResult = {
 }
 
 const { $api } = useNuxtApp()
-const score = ref(50)
-const message = ref('')
-const conversation = ref<ChatMessage[]>([])
-const chatBodyRef = ref<HTMLElement | null>(null)
-const chatLoading = ref(false)
-const endingEarly = ref(false)
-const sessionClosed = ref(false)
+const router = useRouter()
 const finalResult = ref<SimulationResult | null>(null)
 const latestResult = ref<SimulationResult | null>(null)
 const latestLoading = ref(false)
@@ -246,14 +179,6 @@ const mapResultFromApi = (payload: any): SimulationResult => ({
   capabilityProfile: payload.capability_profile ?? undefined,
 })
 
-const applyClosurePayload = (payload: any) => {
-  sessionClosed.value = true
-  const mapped = mapResultFromApi(payload)
-  score.value = mapped.finalScore
-  finalResult.value = mapped
-  latestResult.value = mapped
-}
-
 const fetchLatestResult = async () => {
   latestLoading.value = true
   try {
@@ -270,100 +195,16 @@ const fetchLatestResult = async () => {
   }
 }
 
-const sendMessage = async () => {
-  const content = message.value.trim()
-  if (!content || chatLoading.value) return
-  if (sessionClosed.value) {
-    showToast('当前会话已结束，请重新开始。')
-    return
-  }
-
-  chatLoading.value = true
-  const historyPayload = conversation.value.map((item) => ({ role: item.role, content: item.content }))
-  historyPayload.push({ role: 'user', content })
-
-  conversation.value.push({ role: 'user', content })
-  message.value = ''
-
-  try {
-    const { data } = await $api.post('/chat/scenario/stateless/', {
-      message: content,
-      scenario_type: scenario.type,
+const startSimulation = () => {
+  router.push({
+    path: '/simulation/chat',
+    query: {
+      type: scenario.type,
       difficulty: scenario.difficulty,
       mode: scenario.mode,
-      history: historyPayload,
-      current_score: score.value,
-    })
-
-    conversation.value.push({
-      role: 'assistant',
-      content: data.response || 'AI 暂无回复，请稍后再试。',
-    })
-
-    if (data.session_closed) {
-      applyClosurePayload(data)
-    }
-  } catch (error) {
-    showToast(extractErrorMessage(error, '发送失败，请稍后重试'))
-  } finally {
-    chatLoading.value = false
-    nextTick(scrollToBottom)
-  }
-}
-
-const endSessionEarly = async () => {
-  if (!conversation.value.length || sessionClosed.value || chatLoading.value) return
-  chatLoading.value = true
-  endingEarly.value = true
-  try {
-    const historyPayload = conversation.value.map((item) => ({ role: item.role, content: item.content }))
-    const { data } = await $api.post('/chat/scenario/stateless/', {
-      force_end: true,
-      scenario_type: scenario.type,
-      difficulty: scenario.difficulty,
-      mode: scenario.mode,
-      history: historyPayload,
-      current_score: score.value,
-    })
-
-    if (data.response) {
-      conversation.value.push({ role: 'assistant', content: data.response })
-    }
-
-    if (data.session_closed) {
-      applyClosurePayload(data)
-    }
-  } catch (error) {
-    showToast(extractErrorMessage(error, '结束失败，请稍后再试'))
-  } finally {
-    chatLoading.value = false
-    endingEarly.value = false
-    nextTick(scrollToBottom)
-  }
-}
-
-const resetSession = async () => {
-  if (chatLoading.value) return
-  try {
-    await $api.post('/chat/scenario/stateless/', {
-      reset: true,
-      scenario_type: scenario.type,
-      difficulty: scenario.difficulty,
-      mode: scenario.mode,
-    })
-  } catch (error) {
-    console.warn('reset session failed', error)
-  } finally {
-    conversation.value = []
-    message.value = ''
-    sessionClosed.value = false
-    finalResult.value = null
-    chatLoading.value = false
-    endingEarly.value = false
-    nextTick(scrollToBottom)
-  }
+    },
+  })
 }
 
 onMounted(fetchLatestResult)
-watch(conversation, () => nextTick(scrollToBottom), { deep: true })
 </script>

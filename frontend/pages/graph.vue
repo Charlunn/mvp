@@ -91,9 +91,18 @@
               <p class="text-xs uppercase tracking-widest text-muted-foreground">节点详情</p>
               <div v-if="selectedNode" class="mt-3 space-y-2">
                 <p class="text-base font-semibold">{{ selectedNode.label }}</p>
-                <div class="text-xs text-muted-foreground">
+                <div class="text-xs text-muted-foreground space-y-1">
                   <p>类型：{{ selectedNode.category || '未分类' }}</p>
                   <p>风险等级：{{ riskLevelLabels[selectedNode.riskLevel] || '未知' }}</p>
+                  
+                  <!-- Display properties -->
+                  <div v-if="selectedNode.properties && Object.keys(selectedNode.properties).length" class="mt-2 border-t border-border/50 pt-2">
+                    <p class="mb-1 font-medium text-foreground">详细信息</p>
+                    <div v-for="(value, key) in selectedNode.properties" :key="key" class="grid grid-cols-[80px_1fr] gap-2">
+                      <span class="text-muted-foreground truncate" :title="key">{{ key }}:</span>
+                      <span class="text-foreground break-words">{{ value }}</span>
+                    </div>
+                  </div>
                 </div>
                 <div class="mt-3 rounded-lg border border-border/50 bg-background/50 p-3">
                   <p class="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">关联节点</p>

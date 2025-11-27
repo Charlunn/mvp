@@ -49,3 +49,11 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         """
         self.get_queryset().update(is_read=True)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['delete'], url_path='delete-all')
+    def delete_all(self, request):
+        """
+        Delete all notifications for the user.
+        """
+        self.get_queryset().delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
