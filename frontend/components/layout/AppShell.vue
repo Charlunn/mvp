@@ -1,7 +1,8 @@
 <template>
-  <div class="bg-background text-foreground min-h-screen md:grid md:grid-cols-[240px_1fr] md:items-start">
+  <div class="flex h-screen overflow-hidden bg-background text-foreground">
+    <!-- Sidebar for Desktop -->
     <aside
-      class="hidden md:flex md:sticky md:top-0 md:h-screen md:self-start md:overflow-y-auto flex-col border-r border-border px-6 py-8 gap-8"
+      class="hidden w-[240px] flex-col gap-8 border-r border-border px-6 py-8 md:flex overflow-y-auto"
     >
       <div>
         <p class="text-sm uppercase tracking-[0.3em] text-muted-foreground">VirifySpring</p>
@@ -19,7 +20,7 @@
             <span>{{ item.label }}</span>
             <span
               v-if="item.label === '消息中心' && unreadCount > 0"
-              class="bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center"
+              class="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground"
             >
               {{ unreadCount }}
             </span>
@@ -61,7 +62,9 @@
       </div>
     </aside>
 
-    <div class="flex flex-col min-h-screen">
+    <!-- Main Content Area -->
+    <div class="flex flex-1 flex-col overflow-hidden">
+      <!-- Mobile Header -->
       <header
         class="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:hidden"
       >
@@ -74,7 +77,7 @@
             <Icon name="lucide:bell" class="h-5 w-5" />
             <span
               v-if="unreadCount > 0"
-              class="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center"
+              class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground"
             >
               {{ unreadCount }}
             </span>
@@ -82,10 +85,12 @@
           <ThemeToggle />
         </div>
       </header>
+
+      <!-- Mobile Drawer -->
       <Transition name="fade">
         <div v-if="drawerOpen" class="md:hidden">
           <div class="fixed inset-0 z-40 bg-black/20" @click="drawerOpen = false"></div>
-          <div class="fixed inset-x-0 top-0 z-50 border-b border-border bg-background px-4 py-4 space-y-4 max-h-screen overflow-y-auto">
+          <div class="fixed inset-x-0 top-0 z-50 max-h-screen space-y-4 overflow-y-auto border-b border-border bg-background px-4 py-4">
             <nav class="space-y-1">
               <NuxtLink
                 v-for="item in navItems"
@@ -98,7 +103,7 @@
                 <span>{{ item.label }}</span>
                 <span
                   v-if="item.label === '消息中心' && unreadCount > 0"
-                  class="bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center"
+                  class="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground"
                 >
                   {{ unreadCount }}
                 </span>
@@ -126,7 +131,9 @@
           </div>
         </div>
       </Transition>
-      <main class="flex-1 px-4 py-6 md:px-10">
+
+      <!-- Scrollable Content -->
+      <main class="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 md:px-10">
         <slot />
       </main>
     </div>

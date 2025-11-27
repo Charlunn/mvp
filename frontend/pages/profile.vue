@@ -28,11 +28,13 @@
 
     <!-- Tabs for Profile Sections -->
     <Tabs default-value="profile" class="w-full">
-      <TabsList class="grid w-full grid-cols-3">
-        <TabsTrigger value="profile">个人资料</TabsTrigger>
-        <TabsTrigger value="community">社区动态</TabsTrigger>
-        <TabsTrigger value="training">训练报告</TabsTrigger>
-      </TabsList>
+      <div class="overflow-x-auto pb-2">
+        <TabsList class="grid w-full min-w-[300px] grid-cols-3">
+          <TabsTrigger value="profile">个人资料</TabsTrigger>
+          <TabsTrigger value="community">社区动态</TabsTrigger>
+          <TabsTrigger value="training">训练报告</TabsTrigger>
+        </TabsList>
+      </div>
 
       <!-- Profile Tab Content -->
       <TabsContent value="profile" class="mt-6">
@@ -151,7 +153,7 @@
             </Card>
           </div>
           <div class="space-y-6">
-            <Card class="border-border/70">
+            <Card class="border-border/70 overflow-hidden">
               <CardHeader><CardTitle>能力雷达图</CardTitle><CardDescription>多维度评估反诈能力</CardDescription></CardHeader>
               <CardContent class="p-4"><CapabilityRadar :profile="simulationRadarProfile" height="240px" /></CardContent>
             </Card>

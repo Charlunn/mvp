@@ -128,7 +128,7 @@
         </CardContent>
       </Card>
 
-      <Card class="border border-border/80">
+      <Card class="border border-border/80 overflow-hidden">
         <CardHeader>
           <CardTitle>能力雷达图</CardTitle>
           <CardDescription>从多个维度评估反诈能力</CardDescription>

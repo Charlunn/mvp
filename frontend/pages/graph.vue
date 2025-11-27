@@ -33,12 +33,12 @@
         <CardDescription>实时呈现最新的风险关系网络</CardDescription>
       </CardHeader>
       <CardContent class="space-y-6">
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-[3fr_1.15fr]">
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_350px]">
           <div class="relative overflow-hidden rounded-2xl">
             <ClientOnly>
               <VChart
                 ref="chartRef"
-                class="h-[340px] w-full rounded-2xl border border-border/80 bg-background/60 shadow-inner sm:h-[420px]"
+                class="h-[340px] w-full rounded-2xl border border-border/80 bg-background/60 shadow-inner sm:h-[500px]"
                 :option="chartOptions"
                 autoresize
               />
@@ -51,7 +51,7 @@
               <p>可尝试调整过滤或提升互斥力度</p>
             </div>
           </div>
-          <div class="rounded-2xl border border-border/70 bg-card/80 p-5 text-sm shadow-sm">
+          <div class="h-[340px] sm:h-[500px] overflow-y-auto rounded-2xl border border-border/70 bg-card/80 p-5 text-sm shadow-sm">
             <div>
               <p class="text-xs uppercase tracking-widest text-muted-foreground">图谱统计</p>
               <div class="mt-3 grid grid-cols-2 gap-3 text-base font-semibold">
@@ -90,7 +90,7 @@
             <div>
               <p class="text-xs uppercase tracking-widest text-muted-foreground">节点详情</p>
               <div v-if="selectedNode" class="mt-3 space-y-2">
-                <p class="text-base font-semibold">{{ selectedNode.label }}</p>
+                <p class="text-base font-semibold">{{ selectedNode.displayName }}</p>
                 <div class="text-xs text-muted-foreground space-y-1">
                   <p>类型：{{ selectedNode.category || '未分类' }}</p>
                   <p>风险等级：{{ riskLevelLabels[selectedNode.riskLevel] || '未知' }}</p>
@@ -113,7 +113,7 @@
                       :key="neighbor.name"
                       class="flex items-center justify-between"
                     >
-                      <span class="truncate">{{ neighbor.label }}</span>
+                      <span class="truncate">{{ neighbor.displayName }}</span>
                       <Button size="xs" variant="ghost" class="text-[11px]" @click="focusNode(neighbor.name)">定位</Button>
                     </li>
                   </ul>
@@ -297,7 +297,7 @@ const VChart = defineAsyncComponent({
         'div',
         {
           class:
-            'h-[420px] border border-dashed border-border/60 bg-background flex items-center justify-center text-xs text-muted-foreground',
+            'h-[340px] sm:h-[500px] border border-dashed border-border/60 bg-background flex items-center justify-center text-xs text-muted-foreground',
         },
         '图谱加载中...'
       )
@@ -439,6 +439,7 @@ const mapNode = (node: any) => {
 
   return {
     name: node.id,
+    displayName: labelText,
     category: node.category || props.category || '未分类',
     riskLevel,
     value: node.value || 1,
