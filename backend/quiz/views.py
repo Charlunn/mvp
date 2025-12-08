@@ -21,16 +21,34 @@ logger = logging.getLogger(__name__)
 
 
 class QuestionListView(generics.ListAPIView):
-    """获取题目列表"""
+    """
+    获取题目列表视图
+    
+    功能：
+    - 支持按难度级别筛选题目
+    - 支持限制返回题目数量
+    - 随机打乱题目顺序
+    """
     serializer_class = QuestionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        """
+        获取题目查询集
+        
+        查询参数：
+        - level: 难度级别（easy/medium/hard）
+        - limit: 返回题目数量（默认 10）
+        
+        Returns:
+            随机排序后的题目查询集
+        """
         level = self.request.query_params.get('level')
         limit = self.request.query_params.get('limit', 10)
 
         queryset = Question.objects.all()
         if level:
+            # 按难度级别筛选
             queryset = queryset.filter(level=level)
 
         # 先进行随机排序，再进行切片
@@ -41,21 +59,40 @@ class QuestionListView(generics.ListAPIView):
             if limit > 0:
                 queryset = queryset[:limit]
         except (ValueError, TypeError):
+            # 如果 limit 无效，使用默认值 10
             queryset = queryset[:10]
 
         return queryset
 
 
 class StartQuizSessionView(APIView):
-    """创建一次新的测验会话"""
+    """
+    创建新测验会话视图
+    
+    功能：
+    - 根据指定难度和数量创建测验会话
+    - 随机选择题目
+    - 记录会话信息供后续提交答案使用
+    """
     permission_classes = [permissions.IsAuthenticated]
-    MAX_LIMIT = 10
-    DEFAULT_LIMIT = 5
+    MAX_LIMIT = 10      # 单次测验最多题目数
+    DEFAULT_LIMIT = 5   # 默认题目数
 
     def post(self, request):
+        """
+        创建测验会话
+        
+        请求体：
+        - level: 难度级别（必需）
+        - limit: 题目数量（可选，默认 5）
+        
+        Returns:
+            包含会话 ID 和题目列表的响应
+        """
         level = request.data.get('level')
         limit = request.data.get('limit', self.DEFAULT_LIMIT)
 
+        # 验证难度级别是否有效
         valid_levels = {choice[0] for choice in Question.LEVEL_CHOICES}
         if level not in valid_levels:
             return Response({'detail': '请选择有效的测验难度'}, status=status.HTTP_400_BAD_REQUEST)
@@ -65,12 +102,15 @@ class StartQuizSessionView(APIView):
         except (TypeError, ValueError):
             limit = self.DEFAULT_LIMIT
 
+        # 限制题目数量在 1 到 MAX_LIMIT 之间
         limit = max(1, min(limit, self.MAX_LIMIT))
 
+        # 随机选择指定数量的题目
         question_qs = list(Question.objects.filter(level=level).order_by('?')[:limit])
         if not question_qs:
             return Response({'detail': '当前难度暂无可用题目'}, status=status.HTTP_404_NOT_FOUND)
 
+        # 创建测验会话记录
         session = QuizSession.objects.create(
             user=request.user,
             level=level,

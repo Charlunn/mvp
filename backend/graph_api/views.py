@@ -70,12 +70,27 @@ logger = logging.getLogger(__name__)
 
 
 class BaseGraphAPIView(APIView):
-    """图数据库 API 的基础视图类，提供统一的权限控制与异常处理。"""
+    """
+    图数据库 API 的基础视图类
+    
+    功能：
+    - 提供统一的权限控制（需要用户认证）
+    - 提供统一的异常处理机制
+    - 将 Neo4j 错误转换为友好的中文提示
+    """
 
     permission_classes = [IsAuthenticated]
 
     def handle_exception(self, exc):
-        """统一处理 Neo4j 相关异常，返回更友好的中文提示。"""
+        """
+        统一处理 Neo4j 相关异常，返回更友好的中文提示
+        
+        Args:
+            exc: 捕获的异常对象
+            
+        Returns:
+            包含错误信息的 Response 对象
+        """
         if isinstance(exc, ServiceUnavailable):
             logger.error(f"Neo4j 服务不可用: {exc}")
             return Response(
@@ -103,12 +118,20 @@ class BaseGraphAPIView(APIView):
 
 
 class NodeCRUDView(BaseGraphAPIView):
-    """节点的增删改查接口视图，封装常用的 Neo4j 操作。"""
+    """
+    节点的增删改查接口视图
+    
+    提供的功能：
+    - POST: 创建新节点
+    - GET: 查询节点（支持按 ID、标签、属性查询）
+    - PUT: 更新节点属性
+    - DELETE: 删除节点
+    """
 
     def post(self, request):
         """
-        创建新节点。
-
+        创建新节点
+        
         请求体示例：
         {
             "label": "User",
@@ -118,6 +141,9 @@ class NodeCRUDView(BaseGraphAPIView):
                 "email": "zhangsan@example.com"
             }
         }
+        
+        Returns:
+            包含创建结果和节点数据的响应
         """
         try:
             label = request.data.get('label')
@@ -151,14 +177,17 @@ class NodeCRUDView(BaseGraphAPIView):
 
     def get(self, request):
         """
-        获取节点信息。
-
+        获取节点信息
+        
         查询参数：
-        - node_id: 节点 ID
-        - label: 节点标签
-        - property: 属性名
-        - value: 属性值
-        - limit: 返回数量限制
+        - node_id: 节点 ID（精确查询单个节点）
+        - label: 节点标签（查询该类型的所有节点）
+        - property: 属性名（配合 value 使用）
+        - value: 属性值（配合 property 使用）
+        - limit: 返回数量限制（默认 50）
+        
+        Returns:
+            包含节点数据列表的响应
         """
         try:
             node_id = request.query_params.get('node_id')
