@@ -1,3 +1,42 @@
+# Backend
 backend/media/
+backend/__pycache__/
+backend/*/__pycache__/
+backend/*/*/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Frontend
 frontend/node_modules/
 frontend/.output/
+frontend/.nuxt/
+.DS_Store
+*.local
+
+# Temporary files
+temp_*
+.trae/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
