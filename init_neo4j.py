@@ -29,15 +29,26 @@ SEED_FILE = BACKEND_DIR / "neo4j" / "seed.cypher"
 
 
 def load_env_file(path: Path) -> Dict[str, str]:
-    """Minimal .env parser (key=value, ignores blanks and comments)."""
+    """
+    简单的 .env 文件解析器
+    解析格式为 key=value 的环境变量文件，忽略空行和注释行
+    
+    Args:
+        path: .env 文件路径
+        
+    Returns:
+        包含环境变量键值对的字典
+    """
     data: Dict[str, str] = {}
     if not path.exists():
         return data
 
     for raw_line in path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
+        # 跳过空行、注释行和不包含等号的行
         if not line or line.startswith("#") or "=" not in line:
             continue
+        # 分割键值对，只在第一个等号处分割
         key, value = line.split("=", 1)
         data[key.strip()] = value.strip()
     return data
@@ -61,9 +72,23 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """
+    主函数：初始化 Neo4j 数据库
+    
+    功能流程：
+    1. 解析命令行参数
+    2. 加载 .env 文件中的配置
+    3. 根据 dataset 参数决定导入哪些数据
+       - file: 导入 seed.cypher 文件中的数据
+       - legacy: 导入 legacy 示例数据
+       - both: 先导入 file，再导入 legacy
+    """
     args = parse_args()
 
+    # 加载环境变量文件
     env_values = load_env_file(Path(args.env_file))
+    
+    # 获取 Neo4j 连接配置，优先级：命令行参数 > .env 文件 > 默认值
     uri = args.uri or env_values.get("NEO4J_URI") or "bolt://localhost:7687"
     user = args.user or env_values.get("NEO4J_USERNAME") or "neo4j"
     password = args.password or env_values.get("NEO4J_PASSWORD") or "neo4j"
@@ -73,7 +98,9 @@ def main() -> None:
     dataset = args.dataset
     ran_any = False
 
+    # 根据 dataset 参数决定导入哪些数据
     if dataset in ("file", "both"):
+        # 导入 seed.cypher 文件中的数据
         seed_neo4j(
             uri=uri,
             user=user,
@@ -84,6 +111,7 @@ def main() -> None:
         ran_any = True
 
     if dataset in ("legacy", "both"):
+        # 导入 legacy 示例数据（知识图谱节点和关系）
         seed_legacy_data(
             uri=uri,
             user=user,

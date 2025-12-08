@@ -27,12 +27,17 @@ import openai
 from .knowledge_service import knowledge_service
 from .models import ChatSimulationResult
 
+# 日志记录器
 logger = logging.getLogger(__name__)
 
+# 评分阈值：低于此分数视为高风险
 LOW_SCORE_THRESHOLD = 25
+# 评分阈值：高于此分数视为防范意识优秀
 HIGH_SCORE_THRESHOLD = 90
+# 最大对话轮次限制
 MAX_USER_TURNS = 20
 
+# 演练结束原因标签
 END_REASON_LABELS = {
     "score_low": "得分过低，存在高风险",
     "score_high": "得分充足，防范意识优秀",
@@ -40,15 +45,26 @@ END_REASON_LABELS = {
     "manual": "用户主动结束本轮演练",
 }
 
+# 能力评估维度定义
 CAPABILITY_KEYS = [
-    ("risk_discernment", "风险识别"),
-    ("info_protection", "信息保护"),
-    ("response_speed", "响应速度"),
-    ("emotional_control", "情绪稳定"),
-    ("verification_skill", "核验能力"),
+    ("risk_discernment", "风险识别"),    # 识别诈骗风险的能力
+    ("info_protection", "信息保护"),      # 保护个人信息的意识
+    ("response_speed", "响应速度"),       # 对诈骗的反应速度
+    ("emotional_control", "情绪稳定"),    # 保持冷静的能力
+    ("verification_skill", "核验能力"),   # 验证信息真伪的能力
 ]
 
 def evaluate_session_end(score: int, user_turns: int) -> Optional[str]:
+    """
+    评估对话是否应该结束
+    
+    Args:
+        score: 当前得分
+        user_turns: 用户对话轮次
+        
+    Returns:
+        结束原因（如果应该结束），否则返回 None
+    """
     if score <= LOW_SCORE_THRESHOLD:
         return "score_low"
     if score >= HIGH_SCORE_THRESHOLD:
@@ -59,6 +75,15 @@ def evaluate_session_end(score: int, user_turns: int) -> Optional[str]:
 
 
 def heuristic_capability_profile(final_score: int) -> Dict[str, int]:
+    """
+    基于最终得分生成各维度能力评分的启发式算法
+    
+    Args:
+        final_score: 最终得分 (0-100)
+        
+    Returns:
+        各维度能力评分字典
+    """
     base = max(0, min(100, final_score))
     adjustments = {
         "risk_discernment": base,
@@ -71,6 +96,16 @@ def heuristic_capability_profile(final_score: int) -> Dict[str, int]:
 
 
 def normalize_capability_profile(raw: Optional[Dict[str, Any]], fallback_score: int) -> Dict[str, int]:
+    """
+    标准化能力评分，确保所有维度都有有效值
+    
+    Args:
+        raw: 原始能力评分字典
+        fallback_score: 回退得分（当原始数据不完整时使用）
+        
+    Returns:
+        标准化后的能力评分字典
+    """
     profile = {}
     if isinstance(raw, dict):
         for key, _ in CAPABILITY_KEYS:

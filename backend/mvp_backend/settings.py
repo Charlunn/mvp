@@ -21,14 +21,17 @@ for env_path in (BASE_DIR.parent / ".env", BASE_DIR / ".env"):
 
 
 # ---------------------------------------------------------------------------
-# Core settings
+# 核心设置
 # ---------------------------------------------------------------------------
+# Django 密钥，用于加密签名等安全功能，生产环境必须修改
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
     "mvp-secret-key-change-me",
 )
+# 调试模式开关，生产环境必须设为 False
 DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in {"1", "true", "yes"}
 
+# 允许访问的主机名列表，防止 HTTP Host 头攻击
 default_hosts = "localhost,127.0.0.1,backend"
 ALLOWED_HOSTS = [
     host.strip()
@@ -40,27 +43,31 @@ if not ALLOWED_HOSTS:
 
 
 # ---------------------------------------------------------------------------
-# Applications
+# 应用配置
 # ---------------------------------------------------------------------------
 INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    "corsheaders",
-    "rest_framework",
-    "rest_framework_simplejwt",
-    "rest_framework_simplejwt.token_blacklist",
-    "drf_yasg",
-    # Project apps
-    "users",
-    "quiz",
-    "chatapi",
-    "graph_api",
-    "community",
-    "notifications",
+    # Django 内置应用
+    "django.contrib.admin",         # 管理后台
+    "django.contrib.auth",          # 认证系统
+    "django.contrib.contenttypes",  # 内容类型框架
+    "django.contrib.sessions",      # 会话管理
+    "django.contrib.messages",      # 消息框架
+    "django.contrib.staticfiles",   # 静态文件管理
+    
+    # 第三方应用
+    "corsheaders",                         # CORS 跨域支持
+    "rest_framework",                      # REST API 框架
+    "rest_framework_simplejwt",            # JWT 认证
+    "rest_framework_simplejwt.token_blacklist",  # JWT 令牌黑名单
+    "drf_yasg",                            # API 文档生成
+    
+    # 项目应用
+    "users",          # 用户管理
+    "quiz",           # 知识测验
+    "chatapi",        # AI 模拟对话
+    "graph_api",      # 知识图谱
+    "community",      # 社区功能
+    "notifications",  # 通知系统
 ]
 
 
@@ -100,14 +107,17 @@ WSGI_APPLICATION = "mvp_backend.wsgi.application"
 
 
 # ---------------------------------------------------------------------------
-# Database
+# 数据库配置
 # ---------------------------------------------------------------------------
 def _env(key: str, default: str | None = None) -> str | None:
+    """获取环境变量，自动去除首尾空格"""
     value = os.environ.get(key, default)
     return value.strip() if isinstance(value, str) else value
 
 
+# 根据环境变量决定使用 PostgreSQL 还是 SQLite
 if _env("DB_NAME"):
+    # 生产环境：使用 PostgreSQL 数据库
     DATABASES = {
         "default": {
             "ENGINE": _env("DB_ENGINE", "django.db.backends.postgresql"),
@@ -119,6 +129,7 @@ if _env("DB_NAME"):
         }
     }
 else:
+    # 开发环境：使用 SQLite 数据库（无需额外配置）
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -157,33 +168,39 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 
 # ---------------------------------------------------------------------------
-# REST framework
+# REST Framework 配置
 # ---------------------------------------------------------------------------
 REST_FRAMEWORK = {
+    # 认证方式：JWT 令牌认证和会话认证
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ),
+    # 默认权限：需要用户认证
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
+    # 分页配置：使用页码分页，每页 20 条记录
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
 }
 
+# 响应渲染器配置：使用 Unicode JSON 渲染器
 renderer_classes = ["mvp_backend.renderers.UnicodeJSONRenderer"]
 if DEBUG:
+    # 调试模式下添加可浏览的 API 界面
     renderer_classes.append("rest_framework.renderers.BrowsableAPIRenderer")
 REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = renderer_classes
 
 
+# JWT 令牌配置
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
-    "AUTH_HEADER_TYPES": ("Bearer",),
-    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),     # 访问令牌有效期 1 小时
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),     # 刷新令牌有效期 1 天
+    "ROTATE_REFRESH_TOKENS": True,                   # 刷新时轮换令牌
+    "BLACKLIST_AFTER_ROTATION": True,                # 轮换后将旧令牌加入黑名单
+    "AUTH_HEADER_TYPES": ("Bearer",),                # 认证头类型
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",        # 认证头名称
 }
 
 
