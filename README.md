@@ -97,6 +97,8 @@ docker compose -f docker-compose.prod.yml up -d --build
 | Simulation | `POST /api/chat/generate-report/` | 根据对话生成文字分析报告 |
 | Graph | `GET /api/graph/initial/` | 获取初始图谱数据，用于前端 ECharts 可视化 |
 
+> 📖 **完整API文档**：查看 [API测试文档.md](./API测试文档.md) 获取所有94个API接口的详细说明、请求示例和响应格式。
+
 ## 前端路由速览
 
 | 路由 | 作用 |
