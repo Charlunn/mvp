@@ -35,10 +35,28 @@ import string
 logger = logging.getLogger(__name__)
 
 class UserRegistrationView(generics.CreateAPIView):
+    """
+    用户注册视图
+    
+    功能：
+    - 处理新用户注册请求
+    - 验证注册信息的合法性
+    - 创建新用户账号
+    """
     serializer_class = UserRegistrationSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # 允许任何人访问注册接口
 
     def create(self, request, *args, **kwargs):
+        """
+        创建新用户
+        
+        Args:
+            request: 包含用户注册信息的请求对象
+            
+        Returns:
+            成功返回 201 状态码和成功消息
+            失败返回 400 状态码和错误信息
+        """
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
             logger.error(f"Registration validation failed: {serializer.errors}")
@@ -48,32 +66,79 @@ class UserRegistrationView(generics.CreateAPIView):
         return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
+        """
+        执行用户创建操作
+        
+        Args:
+            serializer: 已验证的序列化器对象
+        
+        注：可在此添加额外逻辑，如发送注册确认邮件
+        """
         user = serializer.save()
         # 在这里可以添加一些额外的逻辑，例如发送注册确认邮件等
         pass
 
 
 class PasswordValidationView(APIView):
+    """
+    密码验证视图
+    
+    功能：验证密码是否符合强度要求
+    """
     permission_classes = [AllowAny]
 
     def post(self, request):
+        """
+        验证密码强度
+        
+        Args:
+            request: 包含待验证密码的请求对象
+            
+        Returns:
+            密码有效返回 200 和 valid: true
+            密码无效返回 400 和错误信息
+        """
         serializer = PasswordValidationSerializer(data=request.data)
         if serializer.is_valid():
             return Response({"valid": True}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserLoginView(TokenObtainPairView):
+    """
+    用户登录视图
+    
+    功能：
+    - 支持用户名、邮箱、手机号三种方式登录
+    - 验证成功后返回 JWT 访问令牌和刷新令牌
+    """
     # 使用我们自定义的登录序列化器来处理账号/邮箱/手机号登录逻辑
     serializer_class = UserLoginSerializer
 
 class UserLogoutView(APIView):
+    """
+    用户登出视图
+    
+    功能：
+    - 将用户的刷新令牌加入黑名单
+    - 使已登出的令牌失效
+    """
     permission_classes = [AllowAny]
 
     def post(self, request):
+        """
+        用户登出
+        
+        Args:
+            request: 包含 refresh_token 的请求对象
+            
+        Returns:
+            成功返回 205 状态码
+            失败返回 400 状态码和错误信息
+        """
         try:
             refresh_token = request.data["refresh_token"]
             token = RefreshToken(refresh_token)
-            token.blacklist() # 将 refresh_token 加入黑名单 (如果启用了黑名单)
+            token.blacklist()  # 将 refresh_token 加入黑名单 (如果启用了黑名单)
             return Response({"message": "Logout successful"}, status=status.HTTP_205_RESET_CONTENT)
         except Exception as e:
             return Response({"detail": "Invalid token or token not provided"}, status=status.HTTP_400_BAD_REQUEST)
